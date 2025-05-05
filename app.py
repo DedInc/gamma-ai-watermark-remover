@@ -6,6 +6,9 @@ from watermark_remover import WatermarkRemover
 
 UPLOAD_FOLDER = 'uploads'
 OUTPUT_FOLDER = 'outputs'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(OUTPUT_FOLDER, exist_ok=True)
+
 ALLOWED_EXTENSIONS = {'pdf'}
 
 app = Quart(__name__)
@@ -87,6 +90,4 @@ async def remove_watermark():
         return await render_template('index.html', error_message=error_message)
 
 if __name__ == '__main__':
-    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-    os.makedirs(OUTPUT_FOLDER, exist_ok=True)
     app.run(debug=True)

@@ -1,4 +1,3 @@
-
 # <div align="center"> 💧✨ Gamma AI Watermark Remover ✨💧 </div>
 <div align="center">
   <img src="https://img.shields.io/badge/Python-3.7+-blue.svg?style=flat-square&logo=python&logoColor=white" alt="Python Version">
@@ -65,7 +64,15 @@ Ready to remove those Gamma AI watermarks from your presentations? Here's how to
    cd gamma-ai-watermark-remover
    ```
 
-2. **Install Python Dependencies:** Ensure you have Python 3.7 or higher installed. Install the required libraries using `pip`:
+2. **Create and Activate a Virtual Environment (Recommended):**
+
+   ```bash
+   python3 -m venv venv-gamma
+   source venv-gamma/bin/activate
+   ```
+   *(On Windows, use `venv-gamma\Scripts\activate` instead of the above activate command.)*
+
+3. **Install Python Dependencies:**
 
    ```bash
    pip install quart PyMuPDF numpy pillow werkzeug
@@ -83,17 +90,27 @@ Ready to remove those Gamma AI watermarks from your presentations? Here's how to
 
 1. **Navigate to the Application Directory:** Open your terminal in the root directory of the cloned repository (where `app.py` is).
 
-2. **Run the Application:** Start the Quart development server:
+2. **Run the Application with Hypercorn (Recommended):**
 
+   ```bash
+   hypercorn app:app
+   ```
+
+   This will launch the server at `http://127.0.0.1:8000/` by default.
+
+   > **Note:** Using Hypercorn is recommended for running Quart apps, as it provides proper ASGI support and avoids issues with the built-in development server (such as pages loading indefinitely).
+
+3. **(Optional) For Development Only:**
+
+   You can still use the Quart development server for quick tests:
    ```bash
    quart run
    ```
+   But for best results, especially with async code, use Hypercorn as shown above.
 
-   This will typically launch the server at `http://127.0.0.1:5000/` or `http://localhost:5000/`.
+4. **Open in your Browser:** Access the address displayed in your terminal (usually `http://127.0.0.1:8000/`) in your web browser. You should see the **Gamma AI Watermark Remover** web interface.
 
-3. **Open in your Browser:** Access the address displayed in your terminal (usually `http://localhost:5000/`) in your web browser. You should see the **Gamma AI Watermark Remover** web interface.
-
-4. **Upload and Remove!**  Click "Choose PDF File", select your Gamma AI presentation PDF, and click "Remove Watermark".  The watermark-free PDF will be downloaded.
+5. **Upload and Remove!**  Click "Choose PDF File", select your Gamma AI presentation PDF, and click "Remove Watermark".  The watermark-free PDF will be downloaded.
 
 ---
 

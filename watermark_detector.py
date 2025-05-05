@@ -2,6 +2,7 @@ import fitz
 from PIL import Image
 import io
 import numpy as np
+import os
 from config import WatermarkConfig
 
 class WatermarkDetector:
@@ -23,6 +24,8 @@ class WatermarkDetector:
 
     def identify_watermarks(self, pdf_path):
         images_to_remove_info = []
+        extracted_dir = 'extracted_images'
+        os.makedirs(extracted_dir, exist_ok=True)
         try:
             pdf_document = fitz.open(pdf_path)
             print("\nSearching for watermarks...\n")
@@ -38,6 +41,15 @@ class WatermarkDetector:
                         base_image = pdf_document.extract_image(xref)
                         image_bytes = base_image["image"]
                         if image_bytes:
+                            # Save every extracted image for inspection
+                            ext = base_image.get('ext', 'png')
+                            out_path = os.path.join(extracted_dir, f"page{page_num+1}_xref{xref}_img{img_index}.{ext}")
+                            with open(out_path, 'wb') as f:
+                                f.write(image_bytes)
+                            # Print image properties for targeting
+                            img = Image.open(io.BytesIO(image_bytes))
+                            print(f"Extracted image: {out_path}, size: {img.width}x{img.height}, ext: {ext}")
+
                             current_hist = self.calculate_histogram(image_bytes)
 
                             similarity = self.compare_histograms(self.template_histogram, current_hist)
@@ -55,6 +67,18 @@ class WatermarkDetector:
                                 print(f"  - Inverted similarity exceeds threshold ({self.similarity_inverted_threshold * 100:.0f}%)")
                                 is_watermark = True
                                 final_similarity = inverted_similarity 
+
+                            # Badge detection by size and extension
+                            if img.width == 575 and img.height == 137 and ext == 'png':
+                                print(f"[AUTO] Badge candidate detected by size/ext: {out_path}")
+                                image_name = f"Image_{img_index}.{ext}"
+                                images_to_remove_info.append({
+                                    'page': page_num,
+                                    'xref': xref,
+                                    'image_name': image_name,
+                                    'similarity': 1.0
+                                })
+                                continue
 
                             if is_watermark:
                                 image_name = f"Image_{img_index}.{base_image['ext']}"
