@@ -1,10 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8" />
     <title>Watermark Remover</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+          integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg=="
+          crossorigin="anonymous" referrerpolicy="no-referrer" />
+
     <style>
+        /* Original UI (unchanged) */
         body {
             background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
             color: #e0e0e0;
@@ -28,6 +32,7 @@
             width: 100%;
             max-width: 650px;
             border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
         }
         .logo-container {
             margin-bottom: 40px;
@@ -49,9 +54,11 @@
             font-size: 1.8em;
             letter-spacing: 1px;
         }
+
         .file-upload-wrapper {
             position: relative;
             margin-bottom: 40px;
+            cursor: pointer;
         }
         .file-upload-input {
             position: absolute;
@@ -76,6 +83,7 @@
             box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
             position: relative;
             overflow: hidden;
+            user-select: none;
         }
         .file-upload-button::before {
             content: '';
@@ -96,10 +104,7 @@
             transform: translateY(-2px);
             box-shadow: 0 12px 25px rgba(0, 0, 0, 0.4);
         }
-        .file-upload-button i {
-            margin-right: 12px;
-            font-size: 1.2em;
-        }
+
         .file-upload-text {
             display: block;
             margin-top: 15px;
@@ -107,6 +112,7 @@
             color: #bbb;
             font-style: italic;
         }
+
         button[type="submit"] {
             padding: 15px 40px;
             border: none;
@@ -121,48 +127,50 @@
             position: relative;
             overflow: hidden;
         }
-        button[type="submit"]::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-            transition: left 0.5s;
-        }
-        button[type="submit"]:hover::before {
-            left: 100%;
-        }
         button[type="submit"]:hover {
             background: linear-gradient(135deg, #6a5acd 0%, #5d4fb3 100%);
             transform: translateY(-2px);
             box-shadow: 0 8px 16px rgba(123, 104, 238, 0.25);
         }
-        button[type="submit"] i {
-            margin-right: 10px;
-        }
+
         .notification {
             margin-top: 30px;
             padding: 20px;
             border-radius: 15px;
             color: #fff;
-            display: none;
-            backdrop-filter: blur(10px);
+            display: block;
+            opacity: 0;
+            transform: translateY(6px);
+            transition: opacity 300ms ease, transform 300ms ease;
+        }
+        .notification.show {
+            opacity: 1;
+            transform: translateY(0);
         }
         .notification.error {
             background: rgba(211, 47, 47, 0.9);
-            border: 1px solid rgba(255, 0, 0, 0.3);
         }
         .notification.success {
             background: rgba(67, 160, 71, 0.9);
-            border: 1px solid rgba(0, 255, 0, 0.3);
-        }
-        .notification i {
-            margin-right: 12px;
         }
 
-        /* Floating particles animation */
+        .download-btn {
+            margin-top: 20px;
+            display: inline-block;
+            padding: 15px 35px;
+            border-radius: 15px;
+            background: linear-gradient(135deg, #7b68ee, #6a5acd);
+            color: white;
+            text-decoration: none;
+            font-size: 1.05em;
+            font-weight: 600;
+        }
+        .download-btn:hover {
+            background: linear-gradient(135deg, #6a5acd, #5d4fb3);
+            transform: translateY(-2px);
+        }
+
+        /* Floating particles (unchanged) */
         .particle {
             position: fixed;
             width: 3px;
@@ -170,89 +178,243 @@
             background: rgba(123, 104, 238, 0.2);
             border-radius: 50%;
             animation: float 8s infinite linear;
-            pointer-events: none;
+        }
+        @keyframes float {
+            0% { transform: translateY(100vh); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(-100px); opacity: 0; }
         }
 
-        @keyframes float {
-            0% {
-                transform: translateY(100vh) rotate(0deg);
-                opacity: 0;
-            }
-            10% {
-                opacity: 1;
-            }
-            90% {
-                opacity: 1;
-            }
-            100% {
-                transform: translateY(-100px) rotate(360deg);
-                opacity: 0;
-            }
+        /* Overlay (spinner removed) */
+        .overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.55);
+            border-radius: 20px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 18px;
+            z-index: 60;
+        }
+        .overlay.show {
+            display: flex;
+        }
+        .overlay-text {
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .progress-wrap {
+            width: 80%;
+            background: rgba(255,255,255,0.05);
+            padding: 6px;
+            border-radius: 12px;
+        }
+        .progress-bar {
+            width: 0%;
+            height: 12px;
+            border-radius: 8px;
+            background: linear-gradient(90deg, #7b68ee, #6a5acd);
+            transition: width 200ms linear;
         }
     </style>
 </head>
-<body>
-    <!-- Floating particles -->
-    <div class="particle" style="left: 10%; animation-delay: 0s;"></div>
-    <div class="particle" style="left: 20%; animation-delay: 1s;"></div>
-    <div class="particle" style="left: 30%; animation-delay: 2s;"></div>
-    <div class="particle" style="left: 40%; animation-delay: 3s;"></div>
-    <div class="particle" style="left: 50%; animation-delay: 4s;"></div>
-    <div class="particle" style="left: 60%; animation-delay: 5s;"></div>
-    <div class="particle" style="left: 70%; animation-delay: 0.5s;"></div>
-    <div class="particle" style="left: 80%; animation-delay: 1.5s;"></div>
-    <div class="particle" style="left: 90%; animation-delay: 2.5s;"></div>
 
-    <div class="container">
+<body>
+    <!-- Floating Particles -->
+    <div class="particle" style="left:5%; animation-delay:0s"></div>
+    <div class="particle" style="left:15%; animation-delay:1s"></div>
+    <div class="particle" style="left:25%; animation-delay:2s"></div>
+    <div class="particle" style="left:35%; animation-delay:3s"></div>
+    <div class="particle" style="left:45%; animation-delay:4s"></div>
+    <div class="particle" style="left:55%; animation-delay:5s"></div>
+    <div class="particle" style="left:65%; animation-delay:0.5s"></div>
+    <div class="particle" style="left:75%; animation-delay:1.5s"></div>
+    <div class="particle" style="left:85%; animation-delay:2.5s"></div>
+
+    <div class="container" id="appContainer">
+
         <div class="logo-container">
-            <svg class="gamma-logo" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 1111 192">
+            <!-- Full SVG -->
+            <svg class="gamma-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1111 192">
                 <defs>
-                    <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style="stop-color:#7b68ee;stop-opacity:1" />
-                        <stop offset="50%" style="stop-color:#9370db;stop-opacity:1" />
-                        <stop offset="100%" style="stop-color:#6a5acd;stop-opacity:1" />
+                    <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%">
+                        <stop offset="0%" style="stop-color:#7b68ee" />
+                        <stop offset="50%" style="stop-color:#9370db" />
+                        <stop offset="100%" style="stop-color:#6a5acd" />
                     </linearGradient>
                 </defs>
-                <path fill="url(#logoGradient)" d="M47.2,14.4c-14.4,8.2-26,19.6-34.4,33.6C4.3,62.1,0,77.7,0,94.3s4.3,32.2,12.7,46.3c8.5,14.1,20,25.4,34.4,33.6,14.4,8.2,30.4,12.4,47.7,12.4h69.8v-112.5h-81v39.1h38.2v31.8h-25.6c-9.1,0-17.6-2.3-25.2-6.9-7.6-4.6-13.8-10.8-18.3-18.4-4.5-7.7-6.7-16.2-6.7-25.3s2.3-17.7,6.7-25.3c4.5-7.7,10.6-13.9,18.3-18.4,7.6-4.6,16.1-6.9,25.2-6.9h68.5V2h-69.8c-17.3,0-33.3,4.2-47.7,12.4h0Z"></path>
-                <path fill="url(#logoGradient)" d="M267.6.2c-42.7,0-77.4,34.8-77.4,77.6v108.8h42v-54.6h70.8v54.6h42v-108.8c0-42.8-34.7-77.6-77.4-77.6ZM303,93h-70.8v-15.3c0-19.6,15.9-35.5,35.4-35.5s35.4,15.9,35.4,35.5v15.3Z"></path>
-                <path fill="url(#logoGradient)" d="M576.4,0c-32.1,0-58.2,26.2-58.2,58.4v74.2c0,8.7-7,15.7-15.7,15.7s-15.7-7-15.7-15.7V58.5c0-32.2-26.1-58.4-58.2-58.4s-58.2,26.2-58.2,58.4v128.2h42.6V58.5c0-8.7,7-15.7,15.7-15.7s15.7,7,15.7,15.7v74.1c0,32.2,26.1,58.4,58.2,58.4s58.2-26.2,58.2-58.4V58.4c0-8.7,7-15.7,15.7-15.7s15.7,7,15.7,15.7v128.3h42.6V58.4c0-32.2-26.1-58.4-58.2-58.4h0Z"></path>
-                <path fill="url(#logoGradient)" d="M1033.1.3c-42.7,0-77.4,34.8-77.4,77.6v108.8h42v-54.6h70.8v54.6h42v-108.8c0-42.8-34.7-77.6-77.4-77.6ZM1068.5,93.2h-70.8v-15.3c0-19.6,15.9-35.5,35.4-35.5s35.4,15.9,35.4,35.5v15.3Z"></path>
-                <path fill="url(#logoGradient)" d="M872,0c-32.1,0-58.2,26.2-58.2,58.4v74.2c0,8.7-7,15.7-15.7,15.7s-15.7-7-15.7-15.7V58.4c0-32.2-26.1-58.4-58.2-58.4s-58.2,26.2-58.2,58.4v128.3h42.6V58.4c0-8.7,7-15.7,15.7-15.7s15.7,7,15.7,15.7v74.2c0,32.2,26.1,58.4,58.2,58.4s58.2-26.2,58.2-58.4V58.4c0-8.7,7-15.7,15.7-15.7s15.7,7,15.7,15.7v128.3h42.6V58.4c0-32.2-26.1-58.4-58.2-58.4Z"></path>
+
+                <path fill="url(#logoGradient)"
+                      d="M47.2,14.4c-14.4,8.2-26,19.6-34.4,33.6C4.3,62.1,0,77.7,0,94.3s4.3,32.2,12.7,46.3
+                         c8.5,14.1,20,25.4,34.4,33.6c14.4,8.2,30.4,12.4,47.7,12.4h69.8v-112.5h-81v39.1h38.2v31.8h-25.6
+                         c-9.1,0-17.6-2.3-25.2-6.9c-7.6-4.6-13.8-10.8-18.3-18.4c-4.5-7.7-6.7-16.2-6.7-25.3s2.3-17.7,6.7-25.3
+                         c4.5-7.7,10.6-13.9,18.3-18.4c7.6-4.6,16.1-6.9,25.2-6.9h68.5V2h-69.8C77.6,2,61.6,6.2,47.2,14.4z">
+                </path>
+
+                <path fill="url(#logoGradient)"
+                      d="M267.6.2c-42.7,0-77.4,34.8-77.4,77.6v108.8h42v-54.6h70.8v54.6h42V77.8C345,35,310.3.2,267.6.2z
+                         M303,93h-70.8v-15.3c0-19.6,15.9-35.5,35.4-35.5s35.4,15.9,35.4,35.5V93z">
+                </path>
+
+                <path fill="url(#logoGradient)"
+                      d="M576.4,0c-32.1,0-58.2,26.2-58.2,58.4v74.2c0,8.7-7,15.7-15.7,15.7s-15.7-7-15.7-15.7V58.5
+                         c0-32.2-26.1-58.4-58.2-58.4S368.5,26.2,368.5,58.4v128.2H411V58.5c0-8.7,7-15.7,15.7-15.7s15.7,7,15.7,15.7v74.1
+                         c0,32.2,26.1,58.4,58.2,58.4s58.2-26.2,58.2-58.4V58.4c0-8.7,7-15.7,15.7-15.7s15.7,7,15.7,15.7v128.3h42.6V58.4
+                         C634.6,26.2,608.5,0,576.4,0z">
+                </path>
+
+                <path fill="url(#logoGradient)"
+                      d="M1033.1.3c-42.7,0-77.4,34.8-77.4,77.6v108.8h42v-54.6h70.8v54.6h42V77.9c0-42.8-34.7-77.6-77.4-77.6z
+                         M1068.5,93.2h-70.8v-15.3c0-19.6,15.9-35.5,35.4-35.5s35.4,15.9,35.4,35.5V93.2z">
+                </path>
+
+                <path fill="url(#logoGradient)"
+                      d="M872,0c-32.1,0-58.2,26.2-58.2,58.4v74.2c0,8.7-7,15.7-15.7,15.7s-15.7-7-15.7-15.7V58.4
+                         c0-32.2-26.1-58.4-58.2-58.4s-58.2,26.2-58.2,58.4v128.3h42.6V58.4c0-8.7,7-15.7,15.7-15.7s15.7,7,15.7,15.7v74.2
+                         c0,32.2,26.1,58.4,58.2,58.4s58.2-26.2,58.2-58.4V58.4c0-8.7,7-15.7,15.7-15.7s15.7,7,15.7,15.7v128.3h42.6V58.4
+                         C930.2,26.2,904.1,0,872,0z">
+                </path>
             </svg>
+
             <h1>AI Watermark Remover</h1>
         </div>
 
-        <form action="/remove_watermark" method="post" enctype="multipart/form-data">
-            <div class="file-upload-wrapper">
-                <input type="file" name="pdf_file" class="file-upload-input" accept=".pdf" required id="pdfFile">
-                <div class="file-upload-button">
-                    <i class="fas fa-cloud-upload-alt"></i> Choose PDF File
+        <form id="uploadForm" action="/remove_watermark" method="post" enctype="multipart/form-data">
+            <div class="file-upload-wrapper" id="dropZone">
+                <input type="file" name="pdf_file" class="file-upload-input" accept=".pdf" id="pdfFile" required>
+                <div class="file-upload-button" id="fileButton">
+                    <i class="fas fa-cloud-upload-alt"></i> Choose PDF File or drag here
                 </div>
                 <span class="file-upload-text" id="fileNameText">No file chosen.</span>
             </div>
 
-            <button type="submit"><i class="fas fa-magic"></i> Remove Watermark</button>
+            <button type="submit" id="submitBtn"><i class="fas fa-magic"></i> Remove Watermark</button>
         </form>
 
         <div id="notification-area">
             {% if error_message %}
-            <div class="notification error" style="display: block;">
-                <i class="fas fa-times-circle"></i> <span>{{ error_message }}</span>
-            </div>
+                <div class="notification error show"><i class="fas fa-times-circle"></i> {{ error_message }}</div>
             {% endif %}
             {% if success_message %}
-            <div class="notification success" style="display: block;">
-                <i class="fas fa-check-circle"></i> <span>{{ success_message }}</span>
-            </div>
+                <div class="notification success show"><i class="fas fa-check-circle"></i> {{ success_message }}</div>
+            {% endif %}
+            {% if download_filename %}
+                <a href="/download/{{ download_filename }}" class="download-btn">
+                    <i class="fas fa-download"></i> Download Processed PDF
+                </a>
             {% endif %}
         </div>
+
+        <!-- Overlay (spinner removed, progress bar only) -->
+        <div class="overlay" id="overlay">
+            <div class="overlay-text" id="overlayText">Uploading & processing...</div>
+            <div class="progress-wrap">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+        </div>
+
     </div>
 
     <script>
-        document.querySelector('.file-upload-input').addEventListener('change', function() {
-            const fileName = this.files[0] ? this.files[0].name : 'No file chosen.';
-            document.getElementById('fileNameText').textContent = fileName;
-        });
+        (function () {
+            const form = document.getElementById("uploadForm");
+            const fileInput = document.getElementById("pdfFile");
+            const fileNameText = document.getElementById("fileNameText");
+            const dropZone = document.getElementById("dropZone");
+            const overlay = document.getElementById("overlay");
+            const progressBar = document.getElementById("progressBar");
+            const overlayText = document.getElementById("overlayText");
+            const notificationArea = document.getElementById("notification-area");
+            const submitBtn = document.getElementById("submitBtn");
+
+            function showOverlay() {
+                overlay.classList.add("show");
+                progressBar.style.width = "0%";
+            }
+            function hideOverlay() {
+                overlay.classList.remove("show");
+                progressBar.style.width = "0%";
+            }
+
+            function updateFileName(file) {
+                fileNameText.textContent = file ? file.name : "No file chosen.";
+            }
+
+            fileInput.addEventListener("change", function () {
+                updateFileName(this.files[0]);
+            });
+
+            ["dragenter", "dragover"].forEach(ev => {
+                dropZone.addEventListener(ev, (e) => {
+                    e.preventDefault();
+                    dropZone.classList.add("drag-over");
+                });
+            });
+
+            ["dragleave", "drop"].forEach(ev => {
+                dropZone.addEventListener(ev, (e) => {
+                    e.preventDefault();
+                    dropZone.classList.remove("drag-over");
+
+                    if (ev === "drop" && e.dataTransfer.files.length) {
+                        fileInput.files = e.dataTransfer.files;
+                        updateFileName(e.dataTransfer.files[0]);
+                    }
+                });
+            });
+
+            form.addEventListener("submit", function (e) {
+                e.preventDefault();
+
+                if (!fileInput.files.length) {
+                    notificationArea.innerHTML =
+                        '<div class="notification error show"><i class="fas fa-times-circle"></i> Select a PDF first.</div>';
+                    return;
+                }
+
+                submitBtn.disabled = true;
+                showOverlay();
+                overlayText.textContent = "Uploading...";
+
+                const xhr = new XMLHttpRequest();
+                xhr.open("POST", form.action);
+
+                xhr.upload.onprogress = function (e) {
+                    if (e.lengthComputable) {
+                        const percent = Math.round((e.loaded / e.total) * 100);
+                        progressBar.style.width = percent + "%";
+                        overlayText.textContent = `Uploading... ${percent}%`;
+                    }
+                };
+
+                xhr.onload = function () {
+                    overlayText.textContent = "Processing...";
+                    progressBar.style.width = "100%";
+
+                    setTimeout(() => {
+                        const doc = new DOMParser().parseFromString(xhr.responseText, "text/html");
+                        notificationArea.innerHTML = doc.querySelector("#notification-area").innerHTML;
+                        hideOverlay();
+                        submitBtn.disabled = false;
+                    }, 500);
+                };
+
+                xhr.onerror = function () {
+                    hideOverlay();
+                    submitBtn.disabled = false;
+                    notificationArea.innerHTML =
+                        '<div class="notification error show"><i class="fas fa-times-circle"></i> Upload failed.</div>';
+                };
+
+                const fd = new FormData();
+                fd.append("pdf_file", fileInput.files[0]);
+                xhr.send(fd);
+            });
+        })();
     </script>
 </body>
 </html>
