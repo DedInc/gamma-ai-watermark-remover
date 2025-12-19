@@ -112,6 +112,13 @@
             color: #bbb;
             font-style: italic;
         }
+        
+        .file-type-hint {
+            display: block;
+            margin-top: 8px;
+            font-size: 0.8em;
+            color: #888;
+        }
 
         button[type="submit"] {
             padding: 15px 40px;
@@ -285,11 +292,12 @@
 
         <form id="uploadForm" action="/remove_watermark" method="post" enctype="multipart/form-data">
             <div class="file-upload-wrapper" id="dropZone">
-                <input type="file" name="pdf_file" class="file-upload-input" accept=".pdf" id="pdfFile" required>
+                <input type="file" name="pdf_file" class="file-upload-input" accept=".pdf,.pptx" id="pdfFile" required>
                 <div class="file-upload-button" id="fileButton">
-                    <i class="fas fa-cloud-upload-alt"></i> Choose PDF File or drag here
+                    <i class="fas fa-cloud-upload-alt"></i> Choose PDF or PowerPoint File
                 </div>
                 <span class="file-upload-text" id="fileNameText">No file chosen.</span>
+                <span class="file-type-hint">Supports PDF and PowerPoint (.pptx) files</span>
             </div>
 
             <button type="submit" id="submitBtn"><i class="fas fa-magic"></i> Remove Watermark</button>
@@ -303,9 +311,15 @@
                 <div class="notification success show"><i class="fas fa-check-circle"></i> {{ success_message }}</div>
             {% endif %}
             {% if download_filename %}
+                {% if file_type == 'pptx' %}
+                <a href="/download/{{ download_filename }}" class="download-btn">
+                    <i class="fas fa-download"></i> Download Processed PowerPoint
+                </a>
+                {% else %}
                 <a href="/download/{{ download_filename }}" class="download-btn">
                     <i class="fas fa-download"></i> Download Processed PDF
                 </a>
+                {% endif %}
             {% endif %}
         </div>
 
@@ -372,7 +386,7 @@
 
                 if (!fileInput.files.length) {
                     notificationArea.innerHTML =
-                        '<div class="notification error show"><i class="fas fa-times-circle"></i> Select a PDF first.</div>';
+                        '<div class="notification error show"><i class="fas fa-times-circle"></i> Select a PDF or PowerPoint file first.</div>';
                     return;
                 }
 
