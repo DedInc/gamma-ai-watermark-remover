@@ -5,3 +5,4 @@ jinja2
 PyMuPDF
 Werkzeug
 aiofiles
+python-pptx

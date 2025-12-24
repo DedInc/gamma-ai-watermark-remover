@@ -169,3 +169,42 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# ===========================================
+# Project-specific exclusions
+# ===========================================
+
+# Temporary PPTX extraction folder
+pptx_extracted/
+
+# Generated output files (folder kept with .gitkeep)
+outputs/*
+!outputs/.gitkeep
+
+# User uploaded files (folder kept with .gitkeep)
+uploads/*
+!uploads/.gitkeep
+
+# PowerPoint/Office temporary and lock files
+~$*.pptx
+~$*.ppt
+~$*.docx
+~$*.xlsx
+~$*.pdf
+
+# General temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+
+# IDE specific
+.idea/
+.vscode/
+*.code-workspace
+
+# OS generated files
+.DS_Store
+Thumbs.db
+Desktop.ini
