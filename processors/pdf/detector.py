@@ -1,13 +1,15 @@
 import fitz  # PyMuPDF
 
+
 def has_target_link(obj_rect, page, target_domain):
     """Checks if an object has a link to the target domain"""
     for link in page.get_links():
-        link_rect = fitz.Rect(link['from'])
-        uri = link.get('uri', '').lower()
+        link_rect = fitz.Rect(link["from"])
+        uri = link.get("uri", "").lower()
         if obj_rect.intersects(link_rect) and target_domain in uri:
-            return True, link.get('uri', '')
+            return True, link.get("uri", "")
     return False, ""
+
 
 def remove_all_target_links(page, target_domain):
     """Removes all links to the target domain"""
@@ -15,13 +17,14 @@ def remove_all_target_links(page, target_domain):
     links = page.get_links()
 
     for link in reversed(links):
-        uri = link.get('uri', '').lower()
+        uri = link.get("uri", "").lower()
         if target_domain in uri:
             page.delete_link(link)
             removed_count += 1
             print(f"    ✓ Link removed: {link.get('uri', '')}")
 
     return removed_count
+
 
 def remove_corner_images_with_links(page, target_domain, corner_threshold=0.7):
     """Removes images in the bottom right corner with target links"""
@@ -30,7 +33,9 @@ def remove_corner_images_with_links(page, target_domain, corner_threshold=0.7):
     bottom_threshold = page_rect.height * corner_threshold
 
     print(f"    Page size: {page_rect.width:.0f}x{page_rect.height:.0f}")
-    print(f"    Right edge threshold: {right_threshold:.0f}, bottom edge threshold: {bottom_threshold:.0f}")
+    print(
+        f"    Right edge threshold: {right_threshold:.0f}, bottom edge threshold: {bottom_threshold:.0f}"
+    )
 
     removed_count = 0
     image_list = page.get_images(full=True)
@@ -45,10 +50,16 @@ def remove_corner_images_with_links(page, target_domain, corner_threshold=0.7):
         img_rects = page.get_image_rects(xref)
 
         for img_rect in img_rects:
-            print(f"    Image xref:{xref} position: ({img_rect.x0:.0f}, {img_rect.y0:.0f}) size: {img_rect.width:.0f}x{img_rect.height:.0f}")
+            print(
+                f"    Image xref:{xref} position: ({img_rect.x0:.0f}, {img_rect.y0:.0f}) size: {img_rect.width:.0f}x{img_rect.height:.0f}"
+            )
 
-            is_in_corner = (img_rect.x0 >= right_threshold and img_rect.y0 >= bottom_threshold)
-            print(f"      In corner: {is_in_corner} (x0={img_rect.x0:.0f}>={right_threshold:.0f}, y0={img_rect.y0:.0f}>={bottom_threshold:.0f})")
+            is_in_corner = (
+                img_rect.x0 >= right_threshold and img_rect.y0 >= bottom_threshold
+            )
+            print(
+                f"      In corner: {is_in_corner} (x0={img_rect.x0:.0f}>={right_threshold:.0f}, y0={img_rect.y0:.0f}>={bottom_threshold:.0f})"
+            )
 
             if is_in_corner:
                 has_link, url = has_target_link(img_rect, page, target_domain)
@@ -67,7 +78,9 @@ def remove_corner_images_with_links(page, target_domain, corner_threshold=0.7):
             img_rects = page.get_image_rects(xref)
 
             for img_rect in img_rects:
-                is_in_corner = (img_rect.x0 >= right_threshold and img_rect.y0 >= bottom_threshold)
+                is_in_corner = (
+                    img_rect.x0 >= right_threshold and img_rect.y0 >= bottom_threshold
+                )
                 if is_in_corner:
                     images_to_remove.add(xref)
                     print(f"      Added for removal image xref:{xref} (in corner)")
@@ -79,18 +92,23 @@ def remove_corner_images_with_links(page, target_domain, corner_threshold=0.7):
             try:
                 # Get sizes to determine type
                 img_rects = page.get_image_rects(xref)
-                img_type = "logo" if any(r.height < 50 for r in img_rects) else "element"
+                img_type = (
+                    "logo" if any(r.height < 50 for r in img_rects) else "element"
+                )
                 sizes = [f"{r.width:.0f}x{r.height:.0f}" for r in img_rects]
 
                 page.delete_image(xref)
                 removed_count += 1
-                print(f"    ✓ Removed image ({img_type}) xref:{xref}: {', '.join(sizes)}")
+                print(
+                    f"    ✓ Removed image ({img_type}) xref:{xref}: {', '.join(sizes)}"
+                )
             except Exception as e:
                 print(f"    ✗ Error removing image xref:{xref}: {e}")
     else:
-        print(f"    No images with target links found in corner")
+        print("    No images with target links found in corner")
 
     return removed_count
+
 
 class WatermarkDetector:
     def __init__(self, target_domain="gamma.app"):
@@ -120,30 +138,39 @@ class WatermarkDetector:
                     img_rects = page.get_image_rects(xref)
 
                     for img_rect in img_rects:
-                        is_in_corner = (img_rect.x0 >= right_threshold and img_rect.y0 >= bottom_threshold)
+                        is_in_corner = (
+                            img_rect.x0 >= right_threshold
+                            and img_rect.y0 >= bottom_threshold
+                        )
                         if is_in_corner:
-                            has_link, url = has_target_link(img_rect, page, self.target_domain)
+                            has_link, url = has_target_link(
+                                img_rect, page, self.target_domain
+                            )
                             if has_link:
-                                results.append({
-                                    'page': page_num,
-                                    'type': 'corner_image_with_link',
-                                    'xref': xref,
-                                    'url': url
-                                })
+                                results.append(
+                                    {
+                                        "page": page_num,
+                                        "type": "corner_image_with_link",
+                                        "xref": xref,
+                                        "url": url,
+                                    }
+                                )
                                 found_targets = True
                                 print(f"  ✓ Found image with target link: {url}")
 
                 # Check links to target domain
                 links = page.get_links()
                 for link in links:
-                    uri = link.get('uri', '').lower()
+                    uri = link.get("uri", "").lower()
                     if self.target_domain in uri:
-                        results.append({
-                            'page': page_num,
-                            'type': 'target_link',
-                            'link': link,
-                            'url': link.get('uri', '')
-                        })
+                        results.append(
+                            {
+                                "page": page_num,
+                                "type": "target_link",
+                                "link": link,
+                                "url": link.get("uri", ""),
+                            }
+                        )
                         found_targets = True
                         print(f"  ✓ Found target link: {link.get('uri', '')}")
 
