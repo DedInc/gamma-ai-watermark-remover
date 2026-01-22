@@ -1,80 +1,52 @@
-# 💧✨ Gamma AI Watermark Remover ✨💧
+# Gamma Watermark Remover
 
-<div align="center">
-  <img src="https://img.shields.io/badge/Python-3.7+-blue.svg?style=flat-square&logo=python&logoColor=white" alt="Python Version">
-  <img src="https://img.shields.io/badge/FastAPI-brightgreen.svg?style=flat-square&logo=fastapi&logoColor=white" alt="FastAPI">
-  <img src="https://img.shields.io/badge/PyMuPDF-orange.svg?style=flat-square&logo=python&logoColor=white" alt="PyMuPDF">
-  <img src="https://img.shields.io/badge/python--pptx-yellow.svg?style=flat-square&logo=python&logoColor=white" alt="python-pptx">
-  <img src="https://img.shields.io/badge/Uvicorn-red.svg?style=flat-square&logo=python&logoColor=white" alt="Uvicorn">
-</div>
+A local web tool to strip the "Made with Gamma" branding from PDF and PowerPoint (.pptx) files exported from gamma.app free accounts. 
 
-<div align="center">
-  <p> ⚠️ <b>Educational Purposes Only</b> ⚠️ </p>
-</div>
+It runs a FastAPI backend that parses the document structure to identify and remove specific watermark elements based on coordinates and object properties.
 
----
+## Functionality
 
-## 🌟 What is Gamma AI Watermark Remover?
+*   **PDF:** Scans pages using PyMuPDF (fitz) for images linked to the gamma.app domain located in the bottom-right corner.
+*   **PPTX:** Uses `python-pptx` to parse the presentation. Since Gamma embeds the watermark in the **Slide Layouts** (masters) rather than individual slides, the script targets the master layouts to remove the branding globally across the presentation.
 
-A specialized web application designed to remove **gamma.app** watermarks from **PDF** and **PowerPoint (.pptx)** files. This tool specifically targets Gamma AI's branding elements that appear in documents exported from their free tier, helping you create clean, professional-looking presentations.
+## Setup
 
-## 🤔 Why do you need it?
+Requires Python 3.7+.
 
-Gamma AI is a fantastic presentation tool, but the watermarks in the free version can be problematic for professional and educational use:
-
-* **Professional Presentations:** Remove distracting branding for business meetings and formal presentations
-* **Educational Materials:** Create clean study materials and academic presentations  
-* **Portfolio Work:** Present your content without third-party branding
-* **Document Clarity:** Improve focus and readability by removing visual distractions
-
-## ⚙️ How does it work?
-
-The application uses an intelligent detection and removal system for both supported formats:
-
-### PDF Documents
-1. **Analysis:** Parses PDF documents page by page using PyMuPDF (fitz)
-2. **Targeted Detection:** Identifies gamma.app watermarks by analyzing images positioned in the bottom-right corner and links pointing to gamma.app domain
-3. **Smart Removal:** Removes detected watermarks while preserving document integrity
-
-### PowerPoint (.pptx) Presentations
-1. **Structure Analysis:** Parses the presentation structure using `python-pptx`, examining both individual slides and **Slide Layouts**
-2. **Layout-Level Detection:** Gamma often embeds watermarks in the slide layouts rather than individual slides. The tool detects these by checking for:
-   - Images in the bottom-right corner (position > 70%)
-   - Associated hyperlinks pointing to `gamma.app`
-3. **Clean Output:** Removes the specific watermark elements from the layouts, which instantly cleans all slides using that layout
-
-## 🚀 Installation & Setup
-
-1. **Install Dependencies:**
+1. Clone the repo:
    ```bash
-   pip install -r requirements.txt --upgrade
+   git clone https://github.com/username/gamma-watermark-remover.git
+   cd gamma-watermark-remover
    ```
-   *Key dependencies: FastAPI, PyMuPDF, python-pptx*
 
-2. **Start the Server:**
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. Run the server:
    ```bash
    python app.py
    ```
+   
+4. Go to `http://localhost:8000` in your browser.
 
-3. **Access the Web Interface:**
-   Open your browser and navigate to: `http://localhost:8000`
+## Technical Notes
 
-4. **Upload and Process:**
-   - Click "Choose PDF or PowerPoint File" to select your Gamma AI document
-   - Click "Remove Watermark" to process the file
-   - Download the clean document automatically
+The detection logic is heuristic-based:
 
----
+*   **PPTX:** Checks `prs.slide_layouts`. If a shape contains a hyperlink to `gamma.app` and is positioned beyond the 70% mark of the slide width/height, it gets deleted.
+*   **PDF:** Iterates through page objects. If a clickable image points to the Gamma domain, the object is removed from the drawing stream.
 
-## 📝 Version History
+If Gamma changes their export coordinates or DOM structure, the coordinate offsets in `utils.py` (or wherever logic resides) will need to be updated.
 
-### v2.3.0
-- **Added PowerPoint Support:** Full support for removing watermarks from `.pptx` files
-- **Advanced Layout Detection:** Smart algorithm to handle watermarks embedded in slide master layouts
-- **Unified Interface:** Drag-and-drop support for both PDF and PPTX formats
+## Dependencies
 
----
+*   `fastapi` / `uvicorn` - Web server
+*   `pymupdf` - PDF processing
+*   `python-pptx` - PowerPoint manipulation
+*   `python-multipart` - For file uploads
 
-<div align="center">
-  <p>✨ <b>Enjoy your clean, professional documents!</b> ✨</p>
-</div>
+## Disclaimer
+
+This tool is for educational purposes only. I am not affiliated with Gamma. Please consider upgrading to their paid tier if you use the software for professional work.
