@@ -10,10 +10,6 @@ from pptx.enum.shapes import MSO_SHAPE_TYPE
 import logging
 import os
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
 logger = logging.getLogger(__name__)
 
 

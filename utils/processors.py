@@ -1,6 +1,7 @@
 """Document processing logic for PDF and PPTX files."""
 
 import logging
+from pptx import Presentation
 
 from processors.pdf.detector import WatermarkDetector
 from processors.pdf.remover import WatermarkRemover
@@ -73,11 +74,18 @@ class PPTXProcessor:
         """
         logger.info(f"Processing PPTX file: {filename}")
 
+        # Count total slides for clearer messaging
+        try:
+            prs = Presentation(upload_path)
+            slide_count = len(prs.slides)
+        except Exception:
+            slide_count = 0
+
         watermark_results = self.detector.detect_watermarks(upload_path)
         watermarks_found = [r for r in watermark_results if r["is_watermark"]]
         watermark_count = len(watermarks_found)
 
-        logger.info(f"Detected {watermark_count} watermarks in PPTX")
+        logger.info(f"Detected {watermark_count} watermarks in PPTX ({slide_count} slides)")
 
         if watermark_count > 0:
             logger.info("Removing watermarks from PPTX...")
@@ -86,21 +94,24 @@ class PPTXProcessor:
             if not result["success"]:
                 return {"success": False, "error": result["error"]}
 
+            slide_info = f" across all {slide_count} slides" if slide_count > 0 else ""
             return {
                 "success": True,
                 "has_watermark": True,
                 "message": (
                     f"Processing finished! Removed {result['watermarks_removed']} watermarks "
-                    f"from {result['layouts_cleaned']} layouts."
+                    f"from {result['layouts_cleaned']} slide layouts{slide_info}."
                 ),
                 "stats": {
                     "watermarks_removed": result["watermarks_removed"],
                     "layouts_cleaned": result["layouts_cleaned"],
+                    "slides_cleaned": slide_count,
                 },
             }
         else:
+            slide_info = f" in your {slide_count}-slide presentation" if slide_count > 0 else " in PowerPoint file"
             return {
                 "success": True,
                 "has_watermark": False,
-                "message": "Gamma.app watermarks not found in PowerPoint file.",
+                "message": f"Gamma.app watermarks not found{slide_info}.",
             }
