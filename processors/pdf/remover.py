@@ -157,22 +157,3 @@ class WatermarkRemover:
             logger.debug("    No images with target links found in corner")
 
         return removed_count
-
-    def remove_watermarks(
-        self,
-        pdf_path,
-        images_to_remove_info,
-        output_pdf_path="output_without_watermarks.pdf",
-    ):
-        """Compatibility with old API - uses new algorithm"""
-        try:
-            images_removed, links_removed = self.clean_pdf_from_target_domain(
-                pdf_path, output_pdf_path
-            )
-
-            logger.info(f"\nNew PDF without watermarks saved as: {output_pdf_path}")
-            logger.info(f"Total elements removed: {images_removed + links_removed}")
-            return output_pdf_path, None
-
-        except Exception as e:
-            return None, f"Error removing watermarks and saving PDF: {str(e)}"

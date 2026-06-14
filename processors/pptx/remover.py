@@ -216,25 +216,3 @@ class PPTXWatermarkRemover:
                 logger.error(f"    ✗ Failed to remove shape {shape.name}: {e}")
 
         return removed_count
-
-    def clean_pptx(self, input_path, output_path=None):
-        """
-        Convenience method to clean a PPTX file.
-
-        Args:
-            input_path: Path to the input PPTX file
-            output_path: Path to save the cleaned file (optional, defaults to input_cleaned.pptx)
-
-        Returns:
-            Tuple of (output_path, error_message)
-        """
-        if output_path is None:
-            base, ext = os.path.splitext(input_path)
-            output_path = f"{base}_cleaned{ext}"
-
-        result = self.remove_watermarks(input_path, output_path)
-
-        if result["success"]:
-            return output_path, None
-        else:
-            return None, result["error"]

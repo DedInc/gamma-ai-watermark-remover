@@ -195,35 +195,3 @@ class PPTXWatermarkDetector:
             results.append(result)
 
         return results
-
-    def has_watermarks(self, pptx_path):
-        """
-        Quick check if a PPTX file contains Gamma watermarks.
-
-        Args:
-            pptx_path: Path to the PPTX file
-
-        Returns:
-            True if watermarks are detected, False otherwise
-        """
-        try:
-            results = self.detect_watermarks(pptx_path)
-            return any(r["is_watermark"] for r in results)
-        except Exception:
-            return False
-
-    def get_watermark_count(self, pptx_path):
-        """
-        Get the count of watermarks in a PPTX file.
-
-        Args:
-            pptx_path: Path to the PPTX file
-
-        Returns:
-            Number of watermarks detected
-        """
-        try:
-            results = self.detect_watermarks(pptx_path)
-            return sum(1 for r in results if r["is_watermark"])
-        except Exception:
-            return 0
