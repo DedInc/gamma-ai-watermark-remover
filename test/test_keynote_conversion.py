@@ -1,85 +1,94 @@
+"""
+Pytest tests for Keynote ↔ PPTX conversion.
+
+These tests drive the real Keynote.app via AppleScript and are therefore
+macOS-only.  On any other platform the entire module is skipped automatically.
+
+Run with:  pytest test/test_keynote_conversion.py -v  (macOS only)
+"""
 import os
-import sys
 import subprocess
+import sys
 
-# Add project root to path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+import pytest
 
-from processors.keynote.converter import key_to_pptx, pptx_to_key
+# Skip the whole module on non-macOS systems
+pytestmark = pytest.mark.skipif(
+    sys.platform != "darwin",
+    reason="Keynote conversion requires macOS and Keynote.app"
+)
 
-def create_dummy_keynote(output_path: str):
-    """Tell Keynote via AppleScript to create a new document and save it."""
-    if sys.platform != "darwin":
-        print("SKIP: create_dummy_keynote requires macOS (osascript not available)")
-        return False
-    escaped_path = output_path.replace('\\', '\\\\').replace('"', '\\"')
-    script = f'''
+from processors.keynote.converter import key_to_pptx, pptx_to_key  # noqa: E402
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _create_dummy_keynote(output_path: str) -> None:
+    """Create a minimal Keynote document via AppleScript."""
+    escaped = output_path.replace("\\", "\\\\").replace('"', '\\"')
+    script = f"""
 tell application "Keynote"
     activate
     set theDoc to make new document
     delay 1
-    save theDoc in POSIX file "{escaped_path}"
+    save theDoc in POSIX file "{escaped}"
     close theDoc saving no
 end tell
-'''
-    print(f"Creating dummy Keynote file at: {output_path}")
+"""
     result = subprocess.run(
         ["osascript", "-e", script],
-        capture_output=True, text=True, timeout=30
+        capture_output=True, text=True, timeout=30,
     )
-    if result.returncode != 0:
-        print("Failed to create dummy Keynote file:")
-        print(result.stderr or result.stdout)
-        return False
-    return True
+    assert result.returncode == 0, (
+        f"AppleScript failed to create dummy Keynote file:\n{result.stderr or result.stdout}"
+    )
 
-def main():
-    if sys.platform != "darwin":
-        print("SKIP: Keynote conversion tests require macOS. Skipping on this platform.")
-        sys.exit(0)
-    test_dir = os.path.dirname(os.path.abspath(__file__))
-    key_path = os.path.join(test_dir, "test_dummy.key")
-    pptx_path = os.path.join(test_dir, "test_dummy.pptx")
-    back_key_path = os.path.join(test_dir, "test_dummy_back.key")
 
-    # Clean up old test files
-    for path in [key_path, pptx_path, back_key_path]:
-        if os.path.exists(path):
-            os.remove(path)
+# ---------------------------------------------------------------------------
+# Tests
+# ---------------------------------------------------------------------------
 
-    # 1. Create dummy Keynote document
-    if not create_dummy_keynote(key_path):
-        sys.exit(1)
+def test_key_to_pptx(tmp_path):
+    """key_to_pptx() should produce a .pptx file from a .key file."""
+    key_path  = str(tmp_path / "dummy.key")
+    pptx_path = str(tmp_path / "dummy.pptx")
 
-    if not os.path.exists(key_path):
-        print(f"Error: dummy Keynote file was not created at {key_path}")
-        sys.exit(1)
-    print("Successfully created dummy Keynote file.")
+    _create_dummy_keynote(key_path)
+    assert os.path.exists(key_path), "Dummy .key file was not created by AppleScript"
 
-    # 2. Convert to PPTX
-    print("\n--- Testing key_to_pptx ---")
-    res = key_to_pptx(key_path, pptx_path)
-    print("Result:", res)
-    if not res["success"] or not os.path.exists(pptx_path):
-        print("Error: key_to_pptx failed.")
-        sys.exit(1)
-    print("Successfully converted Keynote to PPTX.")
+    result = key_to_pptx(key_path, pptx_path)
+    assert result["success"] is True, f"key_to_pptx failed: {result.get('error')}"
+    assert os.path.isfile(pptx_path), ".pptx output file was not created"
 
-    # 3. Convert back to Keynote
-    print("\n--- Testing pptx_to_key ---")
-    res = pptx_to_key(pptx_path, back_key_path)
-    print("Result:", res)
-    if not res["success"] or not os.path.exists(back_key_path):
-        print("Error: pptx_to_key failed.")
-        sys.exit(1)
-    print("Successfully converted PPTX back to Keynote.")
 
-    print("\nAll Keynote tests passed successfully!")
+def test_pptx_to_key(tmp_path):
+    """pptx_to_key() should produce a .key file from a .pptx file."""
+    key_path       = str(tmp_path / "dummy.key")
+    pptx_path      = str(tmp_path / "dummy.pptx")
+    back_key_path  = str(tmp_path / "dummy_back.key")
 
-    # Clean up files
-    for path in [key_path, pptx_path, back_key_path]:
-        if os.path.exists(path):
-            os.remove(path)
+    _create_dummy_keynote(key_path)
+    key_to_pptx(key_path, pptx_path)
 
-if __name__ == "__main__":
-    main()
+    result = pptx_to_key(pptx_path, back_key_path)
+    assert result["success"] is True, f"pptx_to_key failed: {result.get('error')}"
+    assert os.path.exists(back_key_path), ".key output file was not created"
+
+
+def test_full_roundtrip(tmp_path):
+    """A full .key → .pptx → .key round-trip should succeed end-to-end."""
+    key_path       = str(tmp_path / "roundtrip.key")
+    pptx_path      = str(tmp_path / "roundtrip.pptx")
+    back_key_path  = str(tmp_path / "roundtrip_back.key")
+
+    _create_dummy_keynote(key_path)
+
+    r1 = key_to_pptx(key_path, pptx_path)
+    assert r1["success"], f"key_to_pptx step failed: {r1.get('error')}"
+
+    r2 = pptx_to_key(pptx_path, back_key_path)
+    assert r2["success"], f"pptx_to_key step failed: {r2.get('error')}"
+
+    assert os.path.exists(back_key_path)

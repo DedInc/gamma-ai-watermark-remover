@@ -47,6 +47,7 @@ class PPTXWatermarkRemover:
             "watermarks_removed": 0,
             "layouts_cleaned": 0,
             "masters_cleaned": 0,
+            "slide_count": 0,
             "error": None,
         }
 
@@ -109,6 +110,7 @@ class PPTXWatermarkRemover:
             result["watermarks_removed"] = total_removed
             result["layouts_cleaned"] = layouts_cleaned
             result["masters_cleaned"] = masters_cleaned
+            result["slide_count"] = len(prs.slides)
 
             # Summary
             logger.info(f"\n{'=' * 60}")

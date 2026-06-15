@@ -381,17 +381,28 @@ async def download_processed_file(filename: str):
     """
     Stream a processed output file back to the client.
 
-    Returns HTTP 404 JSON when the requested file does not exist.
+    Returns HTTP 404 when the file does not exist or if the resolved path
+    falls outside OUTPUT_FOLDER (path traversal guard).
     """
-    file_path = os.path.join(OUTPUT_FOLDER, filename)
+    # Sanitize the filename to remove any path components
+    safe_name = secure_filename(filename)
+    if not safe_name:
+        return {"error": "Invalid filename."}
 
-    if not os.path.exists(file_path):
+    file_path = os.path.realpath(os.path.join(OUTPUT_FOLDER, safe_name))
+    output_root = os.path.realpath(OUTPUT_FOLDER)
+
+    # Reject anything that escapes the output directory
+    if not file_path.startswith(output_root + os.sep):
         return {"error": "File not found."}
 
-    file_extension = get_file_extension(filename)
+    if not os.path.isfile(file_path):
+        return {"error": "File not found."}
+
+    file_extension = get_file_extension(safe_name)
     mime_type = get_mime_type(file_extension)
 
-    return FileResponse(file_path, media_type=mime_type, filename=filename)
+    return FileResponse(file_path, media_type=mime_type, filename=safe_name)
 
 
 # ===========================

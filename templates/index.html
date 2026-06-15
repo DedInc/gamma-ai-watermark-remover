@@ -1602,13 +1602,13 @@
 
 
 
-            <!-- Upload Form -->
-            <form id="uploadForm" action="/remove_watermark" method="post" enctype="multipart/form-data">
+            <!-- Upload Form (posts to batch API; JS intercepts for live feedback) -->
+            <form id="uploadForm" action="/api/remove_watermarks" method="post" enctype="multipart/form-data">
 
                 <!-- Drop Zone -->
                 <div class="drop-zone" id="dropZone" role="button" tabindex="0"
                      aria-label="Upload area. Click or drag files here.">
-                    <input type="file" name="pdf_file" class="drop-zone__input" accept=".pdf,.pptx,.key,.zip,.png,image/png"
+                    <input type="file" name="files" class="drop-zone__input" accept=".pdf,.pptx,.key,.zip,.png,image/png"
                            id="fileInput" multiple aria-label="Choose PDF, PPTX, Keynote, ZIP or PNG files" />
                     <input type="file" id="folderInput" webkitdirectory directory style="display: none;" aria-label="Choose a folder of PNG slides" />
 

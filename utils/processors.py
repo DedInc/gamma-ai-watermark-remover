@@ -5,7 +5,6 @@ import os
 import shutil
 import tempfile
 import zipfile
-from pptx import Presentation
 
 from processors.pdf.detector import WatermarkDetector
 from processors.pdf.remover import WatermarkRemover
@@ -80,18 +79,11 @@ class PPTXProcessor:
         """
         logger.info(f"Processing PPTX file: {filename}")
 
-        # Count total slides for clearer messaging
-        try:
-            prs = Presentation(upload_path)
-            slide_count = len(prs.slides)
-        except Exception:
-            slide_count = 0
-
         watermark_results = self.detector.detect_watermarks(upload_path)
         watermarks_found = [r for r in watermark_results if r["is_watermark"]]
         watermark_count = len(watermarks_found)
 
-        logger.info(f"Detected {watermark_count} watermarks in PPTX ({slide_count} slides)")
+        logger.info(f"Detected {watermark_count} watermarks in PPTX")
 
         if watermark_count > 0:
             logger.info("Removing watermarks from PPTX...")
@@ -100,6 +92,8 @@ class PPTXProcessor:
             if not result["success"]:
                 return {"success": False, "error": result["error"]}
 
+            # slide_count comes from the remover (it already opens the Presentation)
+            slide_count = result.get("slide_count", 0)
             slide_info = f" across all {slide_count} slides" if slide_count > 0 else ""
             return {
                 "success": True,
@@ -115,11 +109,10 @@ class PPTXProcessor:
                 },
             }
         else:
-            slide_info = f" in your {slide_count}-slide presentation" if slide_count > 0 else " in PowerPoint file"
             return {
                 "success": True,
                 "has_watermark": False,
-                "message": f"Gamma.app watermarks not found{slide_info}.",
+                "message": "Gamma.app watermarks not found in PowerPoint file.",
             }
 
 
@@ -217,9 +210,18 @@ class ZIPProcessor:
             return {"success": False, "error": "The uploaded file is not a valid ZIP archive."}
 
         with tempfile.TemporaryDirectory() as extract_dir:
-            # Extract the ZIP
+            # Safe extraction: validate every member path to prevent Zip Slip
             with zipfile.ZipFile(upload_path, "r") as zf:
-                zf.extractall(extract_dir)
+                extract_root = os.path.realpath(extract_dir)
+                for member in zf.infolist():
+                    # Resolve the target path and ensure it stays inside extract_dir
+                    member_path = os.path.realpath(
+                        os.path.join(extract_root, member.filename)
+                    )
+                    if not member_path.startswith(extract_root + os.sep) and member_path != extract_root:
+                        logger.warning(f"Skipping unsafe ZIP entry: {member.filename!r}")
+                        continue
+                    zf.extract(member, extract_dir)
 
             result = self._process_png_tree(extract_dir, output_path, filename)
 
