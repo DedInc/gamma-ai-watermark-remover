@@ -16,6 +16,7 @@
             crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <!-- JSZip for PPTX thumbnail extraction & PNG bundling -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"
+            integrity="sha512-XMVd28F1oH/O71fzwBnV7HucLxVwtxf26XV8P4wPk26EDxuGZ91N8bsOttmnomcCD3CS5ZMRL50H0GgOHveXg=="
             crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
     <style>
@@ -1806,6 +1807,16 @@
             return (name || '').split('.').pop().toLowerCase();
         }
 
+        /** Escape a string for safe interpolation into innerHTML. */
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
         function formatTime(sec) {
             const m = Math.floor(sec / 60);
             const s = sec % 60;
@@ -2124,18 +2135,19 @@
                                   : ext === 'key'  ? SVGS.key
                                   : ext === 'png'  ? SVGS.png
                                   : SVGS.zip;
-                const extLabel = ext.toUpperCase();
+                const extLabel = escapeHtml(ext.toUpperCase());
+                const safeName = escapeHtml(file.name);
                 return `
                 <div class="queue-item" data-index="${idx}">
                     <div class="file-thumb" id="thumb-${idx}">
-                        <div class="file-thumb__fallback ${ext}">
+                        <div class="file-thumb__fallback ${escapeHtml(ext)}">
                             ${fileIconSvg}
                             <span>${extLabel}</span>
                         </div>
                     </div>
                     <div class="file-meta">
-                        <div class="file-meta__name" title="${file.name}">${file.name}</div>
-                        <div class="file-meta__size">${formatBytes(file.size)}</div>
+                        <div class="file-meta__name" title="${safeName}">${safeName}</div>
+                        <div class="file-meta__size">${escapeHtml(formatBytes(file.size))}</div>
                     </div>
                     <button type="button" class="file-clear" data-remove="${idx}" aria-label="Remove file">
                         ${SVGS.clear}
@@ -2301,10 +2313,11 @@
             const iconSvg = type === 'error' ? SVGS.error 
                           : type === 'success' ? SVGS.success 
                           : SVGS.info;
+            const safeType = escapeHtml(type);
             notifArea.innerHTML = `
-                <div class="notification ${type}">
+                <div class="notification ${safeType}">
                     ${iconSvg}
-                    <span>${message}</span>
+                    <span>${escapeHtml(message)}</span>
                 </div>`;
             notifArea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
@@ -2388,20 +2401,20 @@
                 let statsHtml = '';
                 if (r.success && r.stats) {
                     if (file_type === 'pdf') {
-                        statsHtml = `<span style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">Removed ${r.stats.total_removed} elements</span>`;
+                        statsHtml = `<span style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">Removed ${escapeHtml(r.stats.total_removed)} elements</span>`;
                     } else if (file_type === 'pptx' || file_type === 'key') {
-                        statsHtml = `<span style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">Removed ${r.stats.watermarks_removed} watermarks</span>`;
+                        statsHtml = `<span style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">Removed ${escapeHtml(r.stats.watermarks_removed)} watermarks</span>`;
                     } else if (file_type === 'zip') {
-                        statsHtml = `<span style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">Cleaned ${r.stats.png_cleaned} of ${r.stats.png_total} PNG slides</span>`;
+                        statsHtml = `<span style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">Cleaned ${escapeHtml(r.stats.png_cleaned)} of ${escapeHtml(r.stats.png_total)} PNG slides</span>`;
                     } else if (file_type === 'png') {
                         statsHtml = `<span style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">Cleaned PNG slide image</span>`;
                     }
                 } else if (!r.success && r.error) {
-                    statsHtml = `<span style="font-size:0.7rem; color:var(--error); margin-top:2px; word-break:break-word;">${r.error}</span>`;
+                    statsHtml = `<span style="font-size:0.7rem; color:var(--error); margin-top:2px; word-break:break-word;">${escapeHtml(r.error)}</span>`;
                 }
 
                 const dlBtn = (r.success && r.download_url) ? `
-                    <a href="${r.download_url}" class="result-card__btn-download" title="Download cleaned file">
+                    <a href="${escapeHtml(r.download_url)}" class="result-card__btn-download" title="Download cleaned file">
                         ${SVGS.download}
                         <span>Download</span>
                     </a>` : '';
@@ -2409,13 +2422,13 @@
                 return `
                     <div class="result-card">
                         <div class="result-card__info">
-                            <div class="result-card__icon ${file_type}">
+                            <div class="result-card__icon ${escapeHtml(file_type)}">
                                 ${fileIconSvg}
                             </div>
                             <div class="result-card__details">
-                                <div class="result-card__name" title="${r.filename}">${r.filename}</div>
-                                <div class="result-card__status ${statusClass}">
-                                    ${statusIconSvg} ${statusLabel}
+                                <div class="result-card__name" title="${escapeHtml(r.filename)}">${escapeHtml(r.filename)}</div>
+                                <div class="result-card__status ${escapeHtml(statusClass)}">
+                                    ${statusIconSvg} ${escapeHtml(statusLabel)}
                                 </div>
                                 ${statsHtml}
                             </div>
@@ -2596,17 +2609,17 @@
                 const extLabel = (item.ext || 'file').toUpperCase();
 
                 return `
-                <li class="history-item" data-id="${item.id}" data-status="${item.status}">
-                    <div class="history-item__icon ${iconBg}" data-ext="${extLabel}">${fileIconSvg}</div>
+                <li class="history-item" data-id="${item.id}" data-status="${escapeHtml(item.status)}">
+                    <div class="history-item__icon ${escapeHtml(iconBg)}" data-ext="${escapeHtml(extLabel)}">${fileIconSvg}</div>
                     <div class="history-item__body">
-                        <div class="history-item__name" title="${item.name}">${item.name}</div>
+                        <div class="history-item__name" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</div>
                         <div class="history-item__meta">
-                            <span class="history-item__time">${SVGS.clock}${item.time}</span>
-                            <span class="history-item__status ${item.status}">${statusIconSvg}${statusLabel}</span>
+                            <span class="history-item__time">${SVGS.clock}${escapeHtml(item.time)}</span>
+                            <span class="history-item__status ${escapeHtml(item.status)}">${statusIconSvg}${escapeHtml(statusLabel)}</span>
                         </div>
                     </div>
                     <div class="history-item__actions">
-                        ${item.downloadUrl ? `<a href="${item.downloadUrl}" class="history-item__btn" title="Re-download">${SVGS.download}</a>` : ''}
+                        ${item.downloadUrl ? `<a href="${escapeHtml(item.downloadUrl)}" class="history-item__btn" title="Re-download">${SVGS.download}</a>` : ''}
                         <button class="history-item__btn delete" title="Remove from history" data-delete="${item.id}">${SVGS.clear}</button>
                     </div>
                 </li>`;

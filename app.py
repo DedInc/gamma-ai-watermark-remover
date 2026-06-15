@@ -92,6 +92,7 @@ async def health_check():
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
+    """Serve the main application page."""
     return templates.TemplateResponse(request, "index.html")
 
 
@@ -240,6 +241,14 @@ async def _process_png(request: Request, upload_path: str, filename: str):
 # ===========================
 @app.post("/api/remove_watermarks")
 async def api_remove_watermarks(files: List[UploadFile] = File(...)):
+    """
+    Batch endpoint: process one or more uploaded files sequentially.
+
+    Returns a JSON object with a ``results`` list.  Each entry contains at
+    minimum ``filename`` and ``success`` keys.  On success, ``has_watermark``,
+    ``message``, ``download_filename``, ``download_url``, ``file_type``, and
+    optional ``stats`` are also present.
+    """
     results = []
     for uploaded_file in files:
         if not uploaded_file.filename:
@@ -275,7 +284,10 @@ async def api_remove_watermarks(files: List[UploadFile] = File(...)):
                 temp_input.write(content)
                 temp_input.flush()
 
-                output_filename = f"processed_{filename}"
+                # Prefix with a short UUID so two files with the same name
+                # in the same batch do not overwrite each other.
+                unique_prefix = uuid.uuid4().hex[:8]
+                output_filename = f"processed_{unique_prefix}_{filename}"
                 output_path = os.path.join(OUTPUT_FOLDER, output_filename)
 
                 if file_extension == "pdf":
@@ -330,14 +342,28 @@ async def api_remove_watermarks(files: List[UploadFile] = File(...)):
 
 @app.get("/download_zip")
 async def download_zip(files: str = Query(...)):
+    """
+    Bundle a comma-separated list of processed output filenames into a ZIP and
+    return it as a streaming download.  Returns HTTP 400 when none of the
+    requested filenames exist on disk (e.g. all have expired or are invalid).
+    """
     file_list = [f.strip() for f in files.split(",") if f.strip()]
     zip_buffer = io.BytesIO()
+    added = 0
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
         for filename in file_list:
             safe_name = secure_filename(filename)
             file_path = os.path.join(OUTPUT_FOLDER, safe_name)
             if os.path.isfile(file_path):
                 zip_file.write(file_path, arcname=safe_name)
+                added += 1
+
+    if added == 0:
+        from fastapi.responses import JSONResponse
+        return JSONResponse(
+            status_code=400,
+            content={"error": "No valid files found to bundle. They may have expired or the filenames are invalid."}
+        )
 
     zip_buffer.seek(0)
     return StreamingResponse(
@@ -352,6 +378,11 @@ async def download_zip(files: str = Query(...)):
 # ===========================
 @app.get("/download/{filename}")
 async def download_processed_file(filename: str):
+    """
+    Stream a processed output file back to the client.
+
+    Returns HTTP 404 JSON when the requested file does not exist.
+    """
     file_path = os.path.join(OUTPUT_FOLDER, filename)
 
     if not os.path.exists(file_path):
@@ -368,6 +399,7 @@ async def download_processed_file(filename: str):
 # ===========================
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    """Render HTTP errors (404, etc.) as the main page with an error message."""
     if exc.status_code == 404:
         return templates.TemplateResponse(
             request, "index.html", {"error_message": "Page not found."}, status_code=404,
@@ -381,6 +413,7 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
 
 @app.exception_handler(Exception)
 async def general_exception_handler(request: Request, exc: Exception):
+    """Catch-all handler for unhandled exceptions; returns 500 with an error page."""
     return templates.TemplateResponse(
         request, "index.html",
         {"error_message": f"Internal server error: {str(exc)}"},

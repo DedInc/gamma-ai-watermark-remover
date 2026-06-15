@@ -14,13 +14,23 @@ Flow for removing watermarks from a .key file:
 import subprocess
 import logging
 import os
-import shlex
+import sys
+import threading
 
 logger = logging.getLogger(__name__)
 
+# Serialise all Keynote AppleScript sessions to prevent concurrent interleaving
+_KEYNOTE_LOCK = threading.Lock()
+
 
 def _is_keynote_available() -> bool:
-    """Check whether Keynote.app is installed on this Mac."""
+    """Check whether Keynote.app is installed on this Mac.
+
+    Returns False immediately on non-macOS platforms so callers can
+    surface a clear, accurate error rather than 'Keynote not installed'.
+    """
+    if sys.platform != "darwin":
+        return False
     try:
         result = subprocess.run(
             ["osascript", "-e", 'id of application "Keynote"'],
@@ -48,6 +58,8 @@ def key_to_pptx(key_path: str, pptx_path: str) -> dict:
     Returns:
         dict: { success: bool, error: str|None }
     """
+    if sys.platform != "darwin":
+        return {"success": False, "error": "Keynote conversion is only supported on macOS."}
     if not _is_keynote_available():
         return {"success": False, "error": "Apple Keynote is not installed. Please install Keynote from the App Store, or export your presentation as .pptx from Gamma.app directly."}
 
@@ -64,11 +76,12 @@ def key_to_pptx(key_path: str, pptx_path: str) -> dict:
 end tell
 '''
     try:
-        result = subprocess.run(
-            ["osascript"],
-            input=script,
-            capture_output=True, text=True, timeout=120
-        )
+        with _KEYNOTE_LOCK:
+            result = subprocess.run(
+                ["osascript"],
+                input=script,
+                capture_output=True, text=True, timeout=120
+            )
         if result.returncode != 0:
             err = result.stderr.strip() or result.stdout.strip() or "Unknown AppleScript error"
             logger.error(f"key_to_pptx failed: {err}")
@@ -97,6 +110,8 @@ def pptx_to_key(pptx_path: str, key_path: str) -> dict:
     Returns:
         dict: { success: bool, error: str|None }
     """
+    if sys.platform != "darwin":
+        return {"success": False, "error": "Keynote conversion is only supported on macOS."}
     if not _is_keynote_available():
         return {"success": False, "error": "Apple Keynote is not installed."}
 
@@ -113,11 +128,12 @@ def pptx_to_key(pptx_path: str, key_path: str) -> dict:
 end tell
 '''
     try:
-        result = subprocess.run(
-            ["osascript"],
-            input=script,
-            capture_output=True, text=True, timeout=120
-        )
+        with _KEYNOTE_LOCK:
+            result = subprocess.run(
+                ["osascript"],
+                input=script,
+                capture_output=True, text=True, timeout=120
+            )
         if result.returncode != 0:
             err = result.stderr.strip() or result.stdout.strip() or "Unknown AppleScript error"
             logger.error(f"pptx_to_key failed: {err}")

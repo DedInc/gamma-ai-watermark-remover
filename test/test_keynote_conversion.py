@@ -9,6 +9,9 @@ from processors.keynote.converter import key_to_pptx, pptx_to_key
 
 def create_dummy_keynote(output_path: str):
     """Tell Keynote via AppleScript to create a new document and save it."""
+    if sys.platform != "darwin":
+        print("SKIP: create_dummy_keynote requires macOS (osascript not available)")
+        return False
     escaped_path = output_path.replace('\\', '\\\\').replace('"', '\\"')
     script = f'''
 tell application "Keynote"
@@ -31,6 +34,9 @@ end tell
     return True
 
 def main():
+    if sys.platform != "darwin":
+        print("SKIP: Keynote conversion tests require macOS. Skipping on this platform.")
+        sys.exit(0)
     test_dir = os.path.dirname(os.path.abspath(__file__))
     key_path = os.path.join(test_dir, "test_dummy.key")
     pptx_path = os.path.join(test_dir, "test_dummy.pptx")

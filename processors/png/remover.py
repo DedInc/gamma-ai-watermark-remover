@@ -60,7 +60,9 @@ def remove_png_watermark(input_path: str, output_path: str) -> dict:
         input_path  = os.path.abspath(input_path)
         output_path = os.path.abspath(output_path)
 
-        img = Image.open(input_path).convert("RGBA")
+        # Use context manager to ensure the file handle is released after loading
+        with Image.open(input_path) as img_raw:
+            img = img_raw.convert("RGBA")
         width, height = img.size
 
         # --- Define the watermark region ---
@@ -86,14 +88,17 @@ def remove_png_watermark(input_path: str, output_path: str) -> dict:
         pixels = img.load()
 
         # --- For each row in the watermark region, sample to the left and fill ---
-        sample_x_end   = max(0, region_left - 1)
+        # Guard: only sample when there are pixels to the left of the watermark boundary.
+        # If region_left == 0, sampling from x=0 would be inside the watermark region itself.
+        can_sample = region_left > 0
+        sample_x_end   = region_left - 1
         sample_x_start = max(0, region_left - SAMPLE_STRIP_WIDTH)
 
         rows_patched = 0
         for y in range(region_top, height):
             # Collect sample pixels to the left of the watermark boundary
             sample_pixels = []
-            if sample_x_start <= sample_x_end:
+            if can_sample and sample_x_start <= sample_x_end:
                 for x in range(sample_x_start, sample_x_end + 1):
                     sample_pixels.append(pixels[x, y])
 
