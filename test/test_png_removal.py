@@ -14,10 +14,10 @@ from utils.processors import PNGProcessor
 # ---------------------------------------------------------------------------
 
 def _create_mock_png(path):
-    """Create a 400×300 RGBA PNG with a simulated Gamma watermark badge."""
+    """Create a 400x300 RGBA PNG with a simulated Gamma watermark badge."""
     img = Image.new("RGBA", (400, 300), (45, 90, 180, 255))
     draw = ImageDraw.Draw(img)
-    # Watermark region: bottom-right 22 % width × 10 % height → x∈[312,400], y∈[270,300]
+    # Watermark region: bottom-right 22 % width x 10 % height -> x in [312,400], y in [270,300]
     draw.rectangle([320, 275, 390, 295], fill=(255, 255, 255, 255))
     img.save(path, "PNG")
 

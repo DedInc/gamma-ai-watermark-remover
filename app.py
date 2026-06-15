@@ -17,6 +17,23 @@ from werkzeug.utils import secure_filename
 from utils.file_helpers import allowed_file, get_file_extension, get_mime_type
 from utils.processors import PDFProcessor, PPTXProcessor, KeynoteProcessor, ZIPProcessor, PNGProcessor
 
+# =============================================================================
+# LOCAL USE — NO RATE LIMITS / FILE-SIZE CAPS INTENTIONALLY
+# =============================================================================
+# This server is designed to run on localhost (127.0.0.1) for personal,
+# offline watermark removal.  Because it is never exposed to the public internet
+# there are deliberately NO:
+#   • upload file-size limits      (FastAPI default: unlimited)
+#   • per-IP or per-session rate limits
+#   • concurrent-request throttling
+#   • maximum file-count caps on batch uploads
+#   • maximum filename-count caps on /download_zip
+# If you ever deploy this on a shared or public server, add appropriate
+# middleware (e.g. slowapi, starlette-ratelimit) and set --limit-max-requests
+# in uvicorn, or put it behind a reverse proxy such as nginx/Caddy with
+# file-size and rate-limit rules configured.
+# =============================================================================
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -101,6 +118,11 @@ async def remove_watermark(request: Request, pdf_file: UploadFile = File(...)):
     """
     Remove watermarks from PDF, PPTX, Keynote, or ZIP (PNG slides) files.
     The parameter is named 'pdf_file' for backward compatibility with the form.
+
+    LOCAL USE NOTE: No file-size limit is enforced here.  FastAPI streams the
+    upload directly to a NamedTemporaryFile on disk, so even very large
+    presentations will not exhaust memory.  This is intentional — the tool
+    is designed to run locally and process whatever the user hands it.
     """
     if not pdf_file.filename:
         return templates.TemplateResponse(
@@ -248,6 +270,11 @@ async def api_remove_watermarks(files: List[UploadFile] = File(...)):
     minimum ``filename`` and ``success`` keys.  On success, ``has_watermark``,
     ``message``, ``download_filename``, ``download_url``, ``file_type``, and
     optional ``stats`` are also present.
+
+    LOCAL USE NOTE: No cap on the number of files per request, no per-file
+    size limit, and no rate limiting.  All files are processed sequentially in
+    a single worker thread so the server stays responsive.  This is intentional
+    for personal, offline usage.
     """
     results = []
     for uploaded_file in files:
@@ -346,6 +373,13 @@ async def download_zip(files: str = Query(...)):
     Bundle a comma-separated list of processed output filenames into a ZIP and
     return it as a streaming download.  Returns HTTP 400 when none of the
     requested filenames exist on disk (e.g. all have expired or are invalid).
+
+    LOCAL USE NOTE: No limit is placed on the number of filenames in the
+    ``files`` query parameter or on the total size of the resulting ZIP.
+    Each filename is sanitised with secure_filename() and the resolved path
+    is verified to stay within OUTPUT_FOLDER, so path traversal is prevented
+    even without a file-count cap.  For a public deployment, add a hard cap
+    on the number of files and/or total uncompressed size.
     """
     file_list = [f.strip() for f in files.split(",") if f.strip()]
     zip_buffer = io.BytesIO()

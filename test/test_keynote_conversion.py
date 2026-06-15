@@ -70,7 +70,11 @@ def test_pptx_to_key(tmp_path):
     back_key_path  = str(tmp_path / "dummy_back.key")
 
     _create_dummy_keynote(key_path)
-    key_to_pptx(key_path, pptx_path)
+
+    # Assert the first conversion step so failures here produce clear diagnostics.
+    r1 = key_to_pptx(key_path, pptx_path)
+    assert r1["success"] is True, f"key_to_pptx (prerequisite) failed: {r1.get('error')}"
+    assert os.path.isfile(pptx_path), ".pptx prerequisite file was not created"
 
     result = pptx_to_key(pptx_path, back_key_path)
     assert result["success"] is True, f"pptx_to_key failed: {result.get('error')}"
