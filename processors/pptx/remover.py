@@ -10,10 +10,6 @@ from pptx.enum.shapes import MSO_SHAPE_TYPE
 import logging
 import os
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
 logger = logging.getLogger(__name__)
 
 
@@ -51,6 +47,7 @@ class PPTXWatermarkRemover:
             "watermarks_removed": 0,
             "layouts_cleaned": 0,
             "masters_cleaned": 0,
+            "slide_count": 0,
             "error": None,
         }
 
@@ -113,6 +110,7 @@ class PPTXWatermarkRemover:
             result["watermarks_removed"] = total_removed
             result["layouts_cleaned"] = layouts_cleaned
             result["masters_cleaned"] = masters_cleaned
+            result["slide_count"] = len(prs.slides)
 
             # Summary
             logger.info(f"\n{'=' * 60}")
@@ -220,25 +218,3 @@ class PPTXWatermarkRemover:
                 logger.error(f"    ✗ Failed to remove shape {shape.name}: {e}")
 
         return removed_count
-
-    def clean_pptx(self, input_path, output_path=None):
-        """
-        Convenience method to clean a PPTX file.
-
-        Args:
-            input_path: Path to the input PPTX file
-            output_path: Path to save the cleaned file (optional, defaults to input_cleaned.pptx)
-
-        Returns:
-            Tuple of (output_path, error_message)
-        """
-        if output_path is None:
-            base, ext = os.path.splitext(input_path)
-            output_path = f"{base}_cleaned{ext}"
-
-        result = self.remove_watermarks(input_path, output_path)
-
-        if result["success"]:
-            return output_path, None
-        else:
-            return None, result["error"]

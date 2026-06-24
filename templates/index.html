@@ -1,434 +1,2676 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8" />
-    <title>Watermark Remover</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
-          integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg=="
-          crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gamma Watermark Remover — Remove "Made with Gamma" branding</title>
+    <meta name="description" content="Free local tool to remove 'Made with Gamma' watermarks from PDF, PowerPoint (.pptx), Keynote (.key), and PNG slide exports from gamma.app." />
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'><stop offset='0%25' stop-color='%237c3aed'/><stop offset='100%25' stop-color='%23a78bfa'/></linearGradient></defs><circle cx='50' cy='50' r='45' fill='url(%23g)'/><text x='50' y='68' text-anchor='middle' font-size='50' font-weight='700' fill='white' font-family='sans-serif'>G</text></svg>" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <!-- PDF.js for PDF thumbnail preview -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"
+            integrity="sha512-q+4liFwdPC7jklBEyaaxaqRsNiwQwBsFe3ov7IM9n1XSQBH/RL2kSSUfR1jSPpPMoGqAkLSaJDOCfQ0LYLmSA=="
+            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <!-- JSZip for PPTX thumbnail extraction & PNG bundling -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"
+            integrity="sha512-XMVd28F1oH/O71fzwBnV7HucLxVwtxf26XV8P4wPk26EDxuGZ91N8bsOttmnomcCD3CS5ZMRL50H0GgOHvegtg=="
+            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <!-- JSZip CDN fallback: if SRI/network blocks the CDN, load from unpkg -->
+    <script>
+        if (typeof JSZip === 'undefined') {
+            document.write('<script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js"><\/script>');
+        }
+    </script>
 
     <style>
-        /* Original UI (unchanged) */
-        body {
-            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
-            color: #e0e0e0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            padding: 20px;
-            box-sizing: border-box;
-            overflow-x: hidden;
+        /* ============================
+           CSS Custom Properties
+           ============================ */
+        :root {
+            --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            --radius: 20px;
+            --radius-sm: 12px;
+            --radius-xs: 8px;
+            --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-fast: 0.15s ease;
         }
-        .container {
-            background: rgba(40, 40, 40, 0.95);
-            backdrop-filter: blur(10px);
-            padding: 50px;
-            border-radius: 20px;
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.1);
-            text-align: center;
+
+        [data-theme="dark"] {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: rgba(20, 20, 32, 0.85);
+            --bg-card-border: rgba(124, 58, 237, 0.15);
+            --bg-card-glow: rgba(124, 58, 237, 0.05);
+            --bg-input: rgba(255, 255, 255, 0.04);
+            --bg-input-hover: rgba(255, 255, 255, 0.07);
+            --text-primary: #f0f0f5;
+            --text-secondary: #a0a0b8;
+            --text-muted: #6b6b80;
+            --accent: #7c3aed;
+            --accent-light: #a78bfa;
+            --accent-dark: #5b21b6;
+            --accent-glow: rgba(124, 58, 237, 0.25);
+            --success: #22c55e;
+            --success-bg: rgba(34, 197, 94, 0.1);
+            --error: #ef4444;
+            --error-bg: rgba(239, 68, 68, 0.1);
+            --info: #3b82f6;
+            --info-bg: rgba(59, 130, 246, 0.1);
+            --warning: #f59e0b;
+            --warning-bg: rgba(245, 158, 11, 0.1);
+            --particle-color: rgba(124, 58, 237, 0.15);
+            --divider: rgba(255, 255, 255, 0.06);
+            --shadow: 0 25px 60px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--bg-card-border);
+        }
+
+        [data-theme="light"] {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8fafc;
+            --bg-card: #ffffff;
+            --bg-card-border: rgba(0, 0, 0, 0.08);
+            --bg-card-glow: rgba(0, 0, 0, 0.01);
+            --bg-input: rgba(0, 0, 0, 0.03);
+            --bg-input-hover: rgba(0, 0, 0, 0.05);
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #94a3b8;
+            --accent: #7c3aed;
+            --accent-light: #8b5cf6;
+            --accent-dark: #6d28d9;
+            --accent-glow: rgba(124, 58, 237, 0.08);
+            --success: #16a34a;
+            --success-bg: rgba(22, 163, 74, 0.08);
+            --error: #dc2626;
+            --error-bg: rgba(220, 38, 38, 0.08);
+            --info: #2563eb;
+            --info-bg: rgba(37, 99, 235, 0.08);
+            --warning: #d97706;
+            --warning-bg: rgba(217, 119, 6, 0.08);
+            --particle-color: rgba(0, 0, 0, 0.03);
+            --divider: rgba(0, 0, 0, 0.08);
+            --shadow: 0 20px 40px rgba(0, 0, 0, 0.06), 0 0 0 1px var(--bg-card-border);
+        }
+
+        /* ============================
+           Reset & Base
+           ============================ */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html {
+            font-size: 16px;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body {
+            font-family: var(--font);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            overflow-x: hidden;
+            transition: background var(--transition), color var(--transition);
+        }
+
+        /* ============================
+           Animated Background
+           ============================ */
+        .bg-gradient {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .bg-gradient::before {
+            content: '';
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            border-radius: 50%;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            top: -200px;
+            right: -150px;
+            animation: bgPulse 8s ease-in-out infinite alternate;
+        }
+
+        .bg-gradient::after {
+            content: '';
+            position: absolute;
+            width: 500px;
+            height: 500px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.06) 0%, transparent 70%);
+            bottom: -200px;
+            left: -100px;
+            animation: bgPulse 10s ease-in-out infinite alternate-reverse;
+        }
+
+        @keyframes bgPulse {
+            0%   { transform: scale(1) translate(0, 0); opacity: 0.5; }
+            100% { transform: scale(1.3) translate(30px, -20px); opacity: 1; }
+        }
+
+        /* ============================
+           Particles
+           ============================ */
+        .particle {
+            position: fixed;
+            border-radius: 50%;
+            background: var(--particle-color);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        @keyframes particleFloat {
+            0%   { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+            10%  { opacity: 1; }
+            90%  { opacity: 1; }
+            100% { transform: translateY(-100px) rotate(360deg); opacity: 0; }
+        }
+
+        /* ============================
+           SVG Icon System
+           ============================ */
+        .icon {
+            width: 1.25rem;
+            height: 1.25rem;
+            display: inline-block;
+            vertical-align: middle;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2.25px;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            flex-shrink: 0;
+        }
+
+        /* ============================
+           Theme Toggle
+           ============================ */
+        @keyframes sun-pulse {
+            0%   { transform: scale(0.9);  opacity: 0.9; }
+            50%  { transform: scale(1.55); opacity: 0.5; }
+            100% { transform: scale(2.2);  opacity: 0; }
+        }
+        @keyframes sun-ray-glow {
+            0%   { box-shadow: 0 0 8px 4px rgba(251, 191, 36, 0.7),  0 0 20px 8px  rgba(251, 191, 36, 0.4); }
+            50%  { box-shadow: 0 0 16px 8px rgba(251, 191, 36, 0.9), 0 0 40px 16px rgba(251, 191, 36, 0.5); }
+            100% { box-shadow: 0 0 8px 4px rgba(251, 191, 36, 0.7),  0 0 20px 8px  rgba(251, 191, 36, 0.4); }
+        }
+        @keyframes moon-pulse {
+            0% {
+                transform: scale(0.95);
+                box-shadow: 0 0 15px 4px rgba(167, 139, 250, 0.4);
+                opacity: 0.55;
+            }
+            50% {
+                transform: scale(1.25);
+                box-shadow: 0 0 30px 12px rgba(167, 139, 250, 0.25);
+                opacity: 0.85;
+            }
+            100% {
+                transform: scale(0.95);
+                box-shadow: 0 0 15px 4px rgba(167, 139, 250, 0.4);
+                opacity: 0.55;
+            }
+        }
+        @keyframes sun-spin {
+            from { transform: rotate(0deg); }
+            to   { transform: rotate(360deg); }
+        }
+
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            transition: color var(--transition), transform var(--transition);
+        }
+
+        /* Button Background and Border */
+        .theme-toggle::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            border: 1px solid var(--divider);
+            background: var(--bg-card);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            z-index: 1;
+            transition: background var(--transition), border-color var(--transition);
+        }
+
+        .theme-toggle:hover::before {
+            border-color: var(--accent);
+        }
+
+        /* Pulsing sun/moon halo pseudo-element */
+        .theme-toggle::after {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            border-radius: 50%;
+            z-index: -1;
+            pointer-events: none;
+            transition: all var(--transition);
+        }
+
+        /* Dark mode: moon light radiating glow */
+        @keyframes moon-ray-glow {
+            0%   { box-shadow: 0 0 8px 4px rgba(167, 139, 250, 0.5),  0 0 20px 8px  rgba(167, 139, 250, 0.25); }
+            50%  { box-shadow: 0 0 16px 8px rgba(167, 139, 250, 0.75), 0 0 40px 18px rgba(167, 139, 250, 0.35); }
+            100% { box-shadow: 0 0 8px 4px rgba(167, 139, 250, 0.5),  0 0 20px 8px  rgba(167, 139, 250, 0.25); }
+        }
+        [data-theme="dark"] .theme-toggle::after {
+            background: radial-gradient(circle, rgba(167, 139, 250, 0.55) 0%, rgba(167, 139, 250, 0.15) 55%, transparent 80%);
+            animation: moon-pulse 3.5s ease-in-out infinite;
+        }
+        [data-theme="dark"] .theme-toggle {
+            animation: moon-ray-glow 3.5s ease-in-out infinite;
+        }
+        [data-theme="dark"] .theme-toggle .icon-moon {
+            display: inline-block;
+            color: #a78bfa;
+            filter: drop-shadow(0 0 4px rgba(167, 139, 250, 0.9)) drop-shadow(0 0 10px rgba(167, 139, 250, 0.55));
+        }
+        [data-theme="dark"] .theme-toggle:hover .icon-moon {
+            filter: drop-shadow(0 0 6px rgba(167, 139, 250, 1)) drop-shadow(0 0 16px rgba(167, 139, 250, 0.8));
+        }
+
+        /* Light mode: sun light radiating pulse */
+        [data-theme="light"] .theme-toggle::after {
+            background: radial-gradient(circle, rgba(251, 191, 36, 0.6) 0%, rgba(251, 191, 36, 0.2) 50%, transparent 75%);
+            animation: sun-pulse 2.4s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+        }
+
+        .theme-toggle:hover {
+            color: var(--accent-light);
+            transform: scale(1.1);
+        }
+
+        .theme-toggle:active {
+            transform: scale(0.95);
+        }
+
+        .theme-toggle svg {
+            position: relative;
+            z-index: 2;
+            width: 20px;
+            height: 20px;
+            transition: transform var(--transition);
+        }
+
+        /* Dark mode: show moon (glow handled above) */
+        .theme-toggle .icon-moon { display: inline-block; color: #a78bfa; }
+        .theme-toggle .icon-sun  { display: none; }
+
+        /* Light mode: show sun with radiate */
+        [data-theme="light"] .theme-toggle .icon-moon { display: none; }
+        [data-theme="light"] .theme-toggle .icon-sun  {
+            display: inline-block;
+            color: #f59e0b;
+            filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.9)) drop-shadow(0 0 10px rgba(251, 191, 36, 0.6));
+            animation: sun-spin 12s linear infinite;
+        }
+        [data-theme="light"] .theme-toggle:hover .icon-sun {
+            filter: drop-shadow(0 0 6px rgba(251, 191, 36, 1)) drop-shadow(0 0 16px rgba(251, 191, 36, 0.8));
+            animation: sun-spin 3s linear infinite;
+        }
+        /* Extra ray glow on the button itself in light mode */
+        [data-theme="light"] .theme-toggle {
+            animation: sun-ray-glow 2.4s ease-in-out infinite;
+            border-radius: 50%;
+        }
+
+        /* ============================
+           Main Container
+           ============================ */
+        main {
+            position: relative;
+            z-index: 1;
             width: 100%;
-            max-width: 650px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-width: 660px;
+        }
+
+        .card {
+            background: var(--bg-card);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid var(--bg-card-border);
+            border-radius: var(--radius);
+            padding: 48px 40px 40px;
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+            transition: background var(--transition), border-color var(--transition), box-shadow var(--transition);
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            inset: -1px;
+            border-radius: var(--radius);
+            padding: 1px;
+            background: linear-gradient(135deg, rgba(124,58,237,0.2), transparent 50%, rgba(167,139,250,0.1));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+        }
+
+        /* ============================
+           Header / Logo
+           ============================ */
+        .header {
+            text-align: center;
+            margin-bottom: 36px;
+        }
+
+        .logo-mark {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 24px var(--accent-glow);
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: -0.5px;
+        }
+
+        .header h1 {
+            font-size: 1.65rem;
+            font-weight: 600;
+            letter-spacing: -0.3px;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            font-size: 0.92rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .header p strong {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        /* ============================
+           Drop Zone
+           ============================ */
+        .drop-zone {
+            position: relative;
+            border: 2px dashed var(--divider);
+            border-radius: var(--radius-sm);
+            padding: 36px 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all var(--transition);
+            margin-bottom: 24px;
+            background: var(--bg-input);
+        }
+
+        .drop-zone:hover {
+            border-color: rgba(124, 58, 237, 0.3);
+            background: var(--bg-input-hover);
+        }
+
+        .drop-zone.drag-over {
+            border-color: var(--accent);
+            background: var(--accent-glow);
+            transform: scale(1.01);
+            box-shadow: inset 0 0 30px var(--bg-card-glow);
+        }
+
+        .drop-zone.drag-over .drop-zone__icon {
+            transform: scale(1.15);
+            color: var(--accent-light);
+        }
+
+        .drop-zone.has-file {
+            border-color: var(--accent);
+            border-style: solid;
+            background: var(--accent-glow);
+            padding: 14px 16px;
+        }
+
+        .drop-zone__input {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+            z-index: 2;
+        }
+
+        .drop-zone__icon {
+            width: 44px;
+            height: 44px;
+            color: var(--text-muted);
+            margin: 0 auto 16px;
+            transition: all var(--transition);
+            display: block;
+        }
+
+        .drop-zone__prompt {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+            margin-bottom: 6px;
+        }
+
+        .drop-zone__hint {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .drop-zone.has-file .drop-zone__default { display: none; }
+
+        /* Drag-over overlay for populated queue */
+        .drop-zone__drag-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 10, 25, 0.92);
+            backdrop-filter: blur(6px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity var(--transition);
+            z-index: 10;
+            border-radius: var(--radius-sm);
+            border: 2px dashed var(--accent);
+        }
+
+        .drop-zone.drag-over.has-file .drop-zone__drag-overlay {
+            opacity: 1;
+        }
+
+        /* Thumbnail preview */
+        .file-thumb {
+            width: 36px;
+            height: 44px;
+            border-radius: 6px;
+            overflow: hidden;
+            flex-shrink: 0;
+            background: var(--bg-input);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--divider);
             position: relative;
         }
-        .logo-container {
-            margin-bottom: 40px;
+
+        .file-thumb img,
+        .file-thumb canvas {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .file-thumb__fallback {
             display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1px;
+            width: 100%;
+            height: 100%;
+            color: #fff;
+            font-size: 0.52rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .file-thumb__fallback svg {
+            width: 15px;
+            height: 15px;
+            stroke-width: 2.25px;
+            margin-bottom: 1px;
+        }
+
+        .file-thumb__fallback.pdf .icon-pptx { display: none; }
+        .file-thumb__fallback.pdf .icon-pdf { display: block; }
+        .file-thumb__fallback.pptx .icon-pdf { display: none; }
+        .file-thumb__fallback.pptx .icon-pptx { display: block; }
+        .file-thumb__fallback.pdf  { background: linear-gradient(135deg, #ef4444, #dc2626); }
+        .file-thumb__fallback.pptx { background: linear-gradient(135deg, #f97316, #ea580c); }
+        .file-thumb__fallback.key  { background: linear-gradient(135deg, #0ea5e9, #6366f1); }
+        .file-thumb__fallback.zip  { background: linear-gradient(135deg, #8b5cf6, #a855f7); }
+        .file-thumb__fallback.png  { background: linear-gradient(135deg, #10b981, #059669); }
+
+        .file-thumb .spinner-tiny {
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--divider);
+            border-top-color: var(--accent-light);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            position: absolute;
+        }
+
+        .file-meta {
+            text-align: left;
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .file-meta__name {
+            font-size: 0.83rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 100%;
+        }
+
+        .file-meta__size {
+            font-size: 0.73rem;
+            color: var(--text-muted);
+            margin-top: 1px;
+        }
+
+        .file-clear {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 50%;
+            transition: all var(--transition-fast);
+            position: relative;
+            z-index: 3;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .file-clear:hover { color: var(--error); background: var(--error-bg); }
+
+        /* File size warning */
+        .size-warning {
+            display: none;
+            margin-top: 12px;
+            padding: 10px 14px;
+            border-radius: var(--radius-xs);
+            font-size: 0.8rem;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .size-warning svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .size-warning.warn {
+            display: flex;
+            background: var(--warning-bg);
+            color: var(--warning);
+            border: 1px solid rgba(245, 158, 11, 0.15);
+        }
+
+        .size-warning.danger {
+            display: flex;
+            background: var(--error-bg);
+            color: var(--error);
+            border: 1px solid rgba(239, 68, 68, 0.15);
+        }
+
+        /* ============================
+           Submit Button & Shortcuts
+           ============================ */
+        .btn-submit {
+            width: 100%;
+            padding: 16px 24px;
+            border: none;
+            border-radius: var(--radius-sm);
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+            color: #fff;
+            font-family: var(--font);
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all var(--transition);
+            position: relative;
+            overflow: hidden;
+            letter-spacing: 0.4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+
+        .btn-submit::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, transparent, rgba(255,255,255,0.15), transparent);
+            opacity: 0;
+            transition: opacity var(--transition);
+        }
+
+        .btn-submit:hover:not(:disabled)::before { opacity: 1; }
+
+        .btn-submit:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 28px rgba(139, 92, 246, 0.4);
+        }
+
+        .btn-submit:active:not(:disabled) { transform: translateY(0); }
+        .btn-submit:disabled { opacity: 0.45; cursor: not-allowed; }
+
+        .btn-submit:focus-visible {
+            outline: 2px solid var(--accent-light);
+            outline-offset: 2px;
+        }
+
+        .btn-shortcut {
+            font-size: 0.7rem;
+            background: rgba(255, 255, 255, 0.15);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+            opacity: 0.8;
+            margin-left: auto;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            font-family: var(--font);
+        }
+
+        .hint-shortcut {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            margin-left: 4px;
+            font-weight: 600;
+        }
+
+        /* ============================
+           Processing Overlay
+           ============================ */
+        .overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(10, 10, 15, 0.85);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border-radius: var(--radius);
+            display: none;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             gap: 20px;
-        }
-        .gamma-logo {
-            width: 150px;
-            height: auto;
-            filter: drop-shadow(0 0 8px rgba(123, 104, 238, 0.2));
-        }
-        h1 {
-            margin: 0;
-            color: #ddd;
-            font-weight: 300;
-            font-size: 1.8em;
-            letter-spacing: 1px;
+            z-index: 50;
+            padding: 40px;
         }
 
-        .file-upload-wrapper {
-            position: relative;
-            margin-bottom: 40px;
-            cursor: pointer;
+        .overlay.show { display: flex; }
+
+        .overlay__spinner {
+            width: 48px;
+            height: 48px;
+            border: 3px solid var(--divider);
+            border-top-color: var(--accent-light);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
         }
-        .file-upload-input {
-            position: absolute;
-            top: 0;
-            right: 0;
-            bottom: 0;
-            left: 0;
-            opacity: 0;
-            cursor: pointer;
-            width: 100%;
-            z-index: 1;
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .overlay__text {
+            font-size: 1rem;
+            font-weight: 500;
+            color: #fff;
         }
-        .file-upload-button {
-            display: block;
-            padding: 20px 30px;
-            border-radius: 15px;
-            background: linear-gradient(135deg, #4a4a4a 0%, #555 100%);
-            color: #f0f0f0;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border: 2px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
-            position: relative;
+
+        .overlay__progress-wrap {
+            width: 80%;
+            max-width: 300px;
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 10px;
+            padding: 3px;
             overflow: hidden;
-            user-select: none;
         }
-        .file-upload-button::before {
+
+        .overlay__progress-bar {
+            height: 8px;
+            border-radius: 8px;
+            background: linear-gradient(90deg, var(--accent), var(--accent-light));
+            width: 0%;
+            transition: width 0.3s linear;
+            position: relative;
+        }
+
+        .overlay__progress-bar::after {
             content: '';
             position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-            transition: left 0.5s;
-        }
-        .file-upload-button:hover::before {
-            left: 100%;
-        }
-        .file-upload-button:hover {
-            background: linear-gradient(135deg, #555 0%, #666 100%);
-            border-color: rgba(123, 104, 238, 0.3);
-            transform: translateY(-2px);
-            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.4);
+            inset: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+            animation: shimmer 1.5s infinite;
         }
 
-        .file-upload-text {
-            display: block;
-            margin-top: 15px;
-            font-size: 0.9em;
-            color: #bbb;
-            font-style: italic;
-        }
-        
-        .file-type-hint {
-            display: block;
-            margin-top: 8px;
-            font-size: 0.8em;
-            color: #888;
+        @keyframes shimmer {
+            0%   { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
         }
 
-        button[type="submit"] {
-            padding: 15px 40px;
-            border: none;
-            border-radius: 15px;
-            background: linear-gradient(135deg, #7b68ee 0%, #6a5acd 100%);
-            color: #fff;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 1.1em;
-            font-weight: 500;
-            box-shadow: 0 4px 12px rgba(123, 104, 238, 0.2);
-            position: relative;
-            overflow: hidden;
+        .overlay__elapsed {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-variant-numeric: tabular-nums;
         }
-        button[type="submit"]:hover {
-            background: linear-gradient(135deg, #6a5acd 0%, #5d4fb3 100%);
-            transform: translateY(-2px);
-            box-shadow: 0 8px 16px rgba(123, 104, 238, 0.25);
+
+        /* ============================
+           Notifications / Results
+           ============================ */
+        .notification-area {
+            margin-top: 24px;
+            text-align: center;
         }
 
         .notification {
-            margin-top: 30px;
-            padding: 20px;
-            border-radius: 15px;
-            color: #fff;
-            display: block;
-            opacity: 0;
-            transform: translateY(6px);
-            transition: opacity 300ms ease, transform 300ms ease;
+            padding: 18px 20px;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            animation: notifSlideIn 0.4s ease;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            text-align: left;
         }
-        .notification.show {
-            opacity: 1;
-            transform: translateY(0);
+
+        @keyframes notifSlideIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
-        .notification.error {
-            background: rgba(211, 47, 47, 0.9);
+
+        .notification svg {
+            flex-shrink: 0;
+            margin-top: 2px;
         }
+
         .notification.success {
-            background: rgba(67, 160, 71, 0.9);
+            background: var(--success-bg);
+            color: var(--success);
+            border: 1px solid rgba(34, 197, 94, 0.15);
         }
 
-        .download-btn {
-            margin-top: 20px;
-            display: inline-block;
-            padding: 15px 35px;
-            border-radius: 15px;
-            background: linear-gradient(135deg, #7b68ee, #6a5acd);
-            color: white;
+        .notification.error {
+            background: var(--error-bg);
+            color: var(--error);
+            border: 1px solid rgba(239, 68, 68, 0.15);
+        }
+
+        .notification.info {
+            background: var(--info-bg);
+            color: var(--info);
+            border: 1px solid rgba(59, 130, 246, 0.15);
+        }
+
+        .btn-download {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 16px;
+            padding: 14px 24px;
+            border-radius: var(--radius-sm);
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+            color: #fff;
             text-decoration: none;
-            font-size: 1.05em;
-            font-weight: 600;
+            font-family: var(--font);
+            font-size: 0.95rem;
+            font-weight: 700;
+            transition: all var(--transition);
+            box-shadow: 0 4px 16px rgba(139, 92, 246, 0.35);
+            text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            letter-spacing: 0.3px;
+            width: 100%;
+            justify-content: center;
         }
-        .download-btn:hover {
-            background: linear-gradient(135deg, #6a5acd, #5d4fb3);
+
+        .btn-download:hover {
             transform: translateY(-2px);
+            box-shadow: 0 8px 28px rgba(139, 92, 246, 0.45);
         }
 
-        /* Floating particles (unchanged) */
-        .particle {
-            position: fixed;
-            width: 3px;
-            height: 3px;
-            background: rgba(123, 104, 238, 0.2);
-            border-radius: 50%;
-            animation: float 8s infinite linear;
-        }
-        @keyframes float {
-            0% { transform: translateY(100vh); opacity: 0; }
-            10% { opacity: 1; }
-            90% { opacity: 1; }
-            100% { transform: translateY(-100px); opacity: 0; }
+        .btn-download:focus-visible {
+            outline: 2px solid var(--accent-light);
+            outline-offset: 2px;
         }
 
-        /* Overlay (spinner removed) */
-        .overlay {
-            position: absolute;
-            inset: 0;
-            background: rgba(0,0,0,0.55);
-            border-radius: 20px;
+        /* ============================
+           History Panel (Card-based Dashboard)
+           ============================ */
+        .history-section {
+            margin-top: 32px;
+            border-top: 1px solid var(--divider);
+            padding-top: 24px;
+        }
+
+        .history-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .history-toggle {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-family: var(--font);
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: color var(--transition-fast);
+            padding: 0;
+        }
+
+        .history-toggle:hover { color: var(--text-primary); }
+
+        .history-toggle svg.icon-chevron {
+            transition: transform var(--transition-fast);
+            width: 16px;
+            height: 16px;
+            opacity: 0.6;
+        }
+        .history-toggle.open svg.icon-chevron { transform: rotate(180deg); }
+
+        .history-count-badge {
+            background: var(--accent-glow);
+            color: var(--accent-light);
+            font-size: 0.72rem;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 12px;
+            border: 1px solid var(--bg-card-border);
+        }
+
+        .history-clear {
+            background: rgba(239, 68, 68, 0.05);
+            border: 1px solid rgba(239, 68, 68, 0.15);
+            color: var(--error);
+            font-family: var(--font);
+            font-size: 0.76rem;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 6px 14px;
+            border-radius: var(--radius-xs);
+            transition: all var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .history-clear:hover {
+            color: #fff;
+            background: var(--error);
+            border-color: var(--error);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+        }
+
+        .history-clear svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .history-list {
+            list-style: none;
             display: none;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .history-list.open {
+            display: flex;
+            animation: histListIn 0.3s ease;
+        }
+
+        @keyframes histListIn {
+            from { opacity: 0; transform: translateY(-6px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .history-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 14px 18px;
+            border-radius: var(--radius-sm);
+            background: var(--bg-card);
+            border: 1px solid var(--divider);
+            font-size: 0.86rem;
+            transition: all var(--transition);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .history-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            border-radius: 0 4px 4px 0;
+            transition: background var(--transition);
+        }
+
+        .history-item[data-status="success"]::before { background: var(--success); }
+        .history-item[data-status="clean"]::before { background: var(--info); }
+        .history-item[data-status="error"]::before { background: var(--error); }
+
+        .history-item:hover {
+            background: var(--bg-input-hover);
+            border-color: var(--accent-glow);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        .history-item__icon {
+            width: 40px;
+            height: 40px;
+            border-radius: var(--radius-xs);
+            display: flex;
             align-items: center;
             justify-content: center;
-            flex-direction: column;
-            gap: 18px;
-            z-index: 60;
-        }
-        .overlay.show {
-            display: flex;
-        }
-        .overlay-text {
             color: #fff;
-            font-weight: 600;
+            flex-shrink: 0;
+            position: relative;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
         }
 
-        .progress-wrap {
-            width: 80%;
-            background: rgba(255,255,255,0.05);
-            padding: 6px;
-            border-radius: 12px;
+        .history-item__icon svg {
+            width: 20px;
+            height: 20px;
+            stroke-width: 2.25px;
         }
-        .progress-bar {
-            width: 0%;
+
+        .history-item__icon.pdf  { background: linear-gradient(135deg, #ef4444, #dc2626); }
+        .history-item__icon.pptx { background: linear-gradient(135deg, #f97316, #ea580c); }
+        .history-item__icon.key  { background: linear-gradient(135deg, #0ea5e9, #6366f1); }
+        .history-item__icon.zip  { background: linear-gradient(135deg, #8b5cf6, #a855f7); }
+        .history-item__icon.png  { background: linear-gradient(135deg, #10b981, #059669); }
+
+        .history-item__body {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .history-item__name {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 0.88rem;
+        }
+
+        .history-item__meta {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .history-item__time {
+            font-size: 0.74rem;
+            color: var(--text-muted);
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .history-item__time svg {
+            width: 12px;
             height: 12px;
-            border-radius: 8px;
-            background: linear-gradient(90deg, #7b68ee, #6a5acd);
-            transition: width 200ms linear;
+            opacity: 0.7;
         }
+
+        .history-item__status {
+            font-size: 0.72rem;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-weight: 600;
+            flex-shrink: 0;
+            letter-spacing: 0.2px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .history-item__status svg {
+            width: 12px;
+            height: 12px;
+        }
+
+        .history-item__status.success { background: var(--success-bg); color: var(--success); }
+        .history-item__status.clean   { background: var(--info-bg);    color: var(--info); }
+        .history-item__status.error   { background: var(--error-bg);   color: var(--error); }
+
+        .history-item__actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .history-item__btn {
+            background: var(--bg-input);
+            border: 1px solid var(--divider);
+            color: var(--text-secondary);
+            cursor: pointer;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            transition: all var(--transition);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .history-item__btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .history-item__btn:hover {
+            color: #fff;
+            background: var(--accent);
+            border-color: var(--accent);
+            box-shadow: 0 4px 12px var(--accent-glow);
+            transform: translateY(-1px);
+        }
+
+        .history-item__btn.delete:hover {
+            color: #fff;
+            background: var(--error);
+            border-color: var(--error);
+            box-shadow: 0 4px 12px var(--error-bg);
+            transform: translateY(-1px);
+        }
+
+        /* ============================
+           Footer
+           ============================ */
+        .footer {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            margin-top: 28px;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+
+        .footer a {
+            color: var(--accent-light);
+            text-decoration: none;
+            transition: color var(--transition-fast);
+        }
+
+        .footer a:hover { color: var(--accent); text-decoration: underline; }
+
+        /* ============================
+           Touch & Active Interactions
+           ============================ */
+        button,
+        a.btn-download,
+        a.btn-download-all,
+        .result-card__btn-download,
+        .btn-add-more,
+        .drop-zone,
+        .history-toggle,
+        .theme-toggle {
+            touch-action: manipulation;
+        }
+
+        button:active,
+        .btn-submit:active,
+        .btn-download:active,
+        .btn-download-all:active,
+        .result-card__btn-download:active,
+        .btn-add-more:active,
+        .history-item__btn:active,
+        .file-clear:active {
+            transform: scale(0.96);
+        }
+
+        /* ============================
+           File Queue Styles
+           ============================ */
+        .drop-zone.has-file .drop-zone__input {
+            pointer-events: none;
+        }
+
+        .drop-zone__file-info {
+            display: none;
+            flex-direction: column;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .drop-zone.has-file .drop-zone__file-info {
+            display: flex;
+        }
+
+        /* Queue header row (count badge + Clear All) */
+        .queue-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 5px 10px;
+            margin-bottom: 5px;
+            background: var(--bg-input);
+            border: 1px solid var(--divider);
+            border-radius: var(--radius-xs);
+        }
+
+        .queue-count-badge {
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: var(--accent-light);
+            background: var(--accent-glow);
+            border: 1px solid var(--bg-card-border);
+            padding: 1px 8px;
+            border-radius: 10px;
+            letter-spacing: 0.2px;
+        }
+
+        .btn-clear-queue {
+            background: var(--error-bg);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: var(--error);
+            font-family: var(--font);
+            font-size: 0.7rem;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 4px 10px;
+            border-radius: var(--radius-xs);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: all var(--transition-fast);
+        }
+
+        .btn-clear-queue:hover {
+            background: var(--error);
+            color: #ffffff;
+            border-color: var(--error);
+            transform: translateY(-0.5px);
+        }
+
+        .btn-clear-queue svg {
+            width: 11px;
+            height: 11px;
+        }
+
+        /* Constrain queue list so many files don't blow out the drop zone */
+        #queueList {
+            max-height: 320px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding-right: 3px;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(124, 58, 237, 0.35) transparent;
+        }
+
+        #queueList::-webkit-scrollbar {
+            width: 3px;
+        }
+
+        #queueList::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        #queueList::-webkit-scrollbar-thumb {
+            background: rgba(124, 58, 237, 0.4);
+            border-radius: 4px;
+        }
+
+        .queue-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--divider);
+            padding: 6px 10px;
+            border-radius: var(--radius-xs);
+            transition: all var(--transition);
+            position: relative;
+        }
+
+        [data-theme="light"] .queue-item {
+            background: rgba(0, 0, 0, 0.02);
+        }
+
+        .queue-item:hover {
+            border-color: rgba(124, 58, 237, 0.25);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        [data-theme="light"] .queue-item:hover {
+            background: rgba(0, 0, 0, 0.04);
+        }
+
+        /* Queue actions row — compact inline buttons */
+        .queue-actions {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 5px;
+            z-index: 3;
+            position: relative;
+        }
+
+        .btn-add-more {
+            background: none;
+            border: 1px dashed var(--accent);
+            color: var(--accent-light);
+            cursor: pointer;
+            padding: 5px 12px;
+            border-radius: var(--radius-xs);
+            font-size: 0.78rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all var(--transition);
+        }
+
+        .btn-add-more:hover {
+            background: var(--accent-glow);
+            color: var(--accent);
+            border-style: solid;
+        }
+
+        /* ============================
+           Result Cards & ZIP download
+           ============================ */
+        .result-cards-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 20px;
+            width: 100%;
+        }
+
+        .result-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            background: var(--bg-card-glow);
+            border: 1px solid var(--divider);
+            padding: 14px 18px;
+            border-radius: var(--radius-sm);
+            transition: all var(--transition);
+        }
+
+        .result-card:hover {
+            border-color: rgba(124, 58, 237, 0.25);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .result-card__info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+            flex: 1;
+        }
+
+        .result-card__icon {
+            width: 36px;
+            height: 36px;
+            border-radius: var(--radius-xs);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            color: #fff;
+        }
+
+        .result-card__icon.pdf {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+        }
+
+        .result-card__icon.pptx {
+            background: linear-gradient(135deg, #f97316, #ea580c);
+        }
+
+        .result-card__icon.key {
+            background: linear-gradient(135deg, #0ea5e9, #6366f1);
+        }
+
+        .result-card__icon.zip {
+            background: linear-gradient(135deg, #8b5cf6, #a855f7);
+        }
+
+        .result-card__icon.png {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+
+        .result-card__icon svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .result-card__details {
+            display: flex;
+            flex-direction: column;
+            text-align: left;
+            min-width: 0;
+        }
+
+        .result-card__name {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 100%;
+        }
+
+        .result-card__status {
+            font-size: 0.75rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 2px;
+        }
+
+        .result-card__status.success { color: var(--success); }
+        .result-card__status.clean { color: var(--accent-light); }
+        .result-card__status.error { color: var(--error); }
+
+        .result-card__status svg {
+            width: 14px;
+            height: 14px;
+            stroke-width: 2.25px;
+        }
+
+        .result-card__actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            z-index: 3;
+        }
+
+        .result-card__btn-download {
+            background: var(--accent);
+            color: #fff !important;
+            border: none;
+            padding: 8px 14px;
+            border-radius: var(--radius-xs);
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all var(--transition);
+            text-decoration: none;
+        }
+
+        .result-card__btn-download:hover {
+            background: var(--accent-light);
+            transform: translateY(-1px);
+        }
+
+        .btn-download-all {
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            color: #fff !important;
+            border: none;
+            width: 100%;
+            padding: 12px;
+            border-radius: var(--radius-sm);
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all var(--transition);
+            margin-bottom: 16px;
+            text-decoration: none;
+            box-shadow: 0 4px 12px var(--accent-glow);
+        }
+
+        .btn-download-all:hover {
+            opacity: 0.95;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(124, 58, 237, 0.4);
+        }
+
+        /* ============================
+           Responsive Media Query
+           ============================ */
+        @media (max-width: 640px) {
+            body { padding: 12px; }
+            .card { padding: 24px 16px 20px; }
+            .header h1 { font-size: 1.25rem; }
+            .header p { font-size: 0.85rem; }
+            .drop-zone { padding: 24px 16px; }
+            .drop-zone.has-file { padding: 12px; }
+            .file-meta__name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+            .theme-toggle { top: 8px; right: 8px; width: 36px; height: 36px; }
+
+            /* History Stacking */
+            .history-item {
+                display: grid;
+                grid-template-columns: 40px 1fr;
+                gap: 10px 12px;
+                padding: 12px;
+            }
+            .history-item__icon {
+                grid-column: 1;
+                grid-row: 1;
+            }
+            .history-item__body {
+                grid-column: 2;
+                grid-row: 1;
+                min-width: 0;
+            }
+            .history-item__actions {
+                grid-column: 1 / span 2;
+                grid-row: 2;
+                display: flex;
+                justify-content: flex-end;
+                border-top: 1px solid var(--divider);
+                padding-top: 8px;
+                gap: 8px;
+            }
+            .history-item__btn {
+                flex: 1;
+                max-width: 120px;
+                height: 44px; /* Touch target size */
+            }
+
+            /* Result card adjustments for mobile */
+            .result-card {
+                flex-direction: column;
+                align-items: stretch;
+                padding: 12px;
+                gap: 12px;
+            }
+            .result-card__actions {
+                justify-content: flex-end;
+                border-top: 1px solid var(--divider);
+                padding-top: 8px;
+            }
+            .result-card__btn-download {
+                width: 100%;
+                justify-content: center;
+                height: 44px; /* Touch target size */
+            }
+        }
+
+        /* ============================
+           Accessibility / Reduced Motion
+           ============================ */
+        @media (prefers-reduced-motion: reduce) {
+            .bg-gradient::before,
+            .bg-gradient::after,
+            .particle,
+            .btn-submit,
+            .theme-toggle,
+            .file-clear,
+            .history-item__btn,
+            .overlay__spinner,
+            .overlay__progress-bar::after {
+                animation: none !important;
+                transition: none !important;
+                transform: none !important;
+            }
+            .particle {
+                display: none !important;
+            }
+        }
+
+        /* ============================
+           Focus-visible global
+           ============================ */
+        :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+        :focus:not(:focus-visible) { outline: none; }
     </style>
 </head>
 
 <body>
-    <!-- Floating Particles -->
-    <div class="particle" style="left:5%; animation-delay:0s"></div>
-    <div class="particle" style="left:15%; animation-delay:1s"></div>
-    <div class="particle" style="left:25%; animation-delay:2s"></div>
-    <div class="particle" style="left:35%; animation-delay:3s"></div>
-    <div class="particle" style="left:45%; animation-delay:4s"></div>
-    <div class="particle" style="left:55%; animation-delay:5s"></div>
-    <div class="particle" style="left:65%; animation-delay:0.5s"></div>
-    <div class="particle" style="left:75%; animation-delay:1.5s"></div>
-    <div class="particle" style="left:85%; animation-delay:2.5s"></div>
+    <!-- Animated Background -->
+    <div class="bg-gradient" aria-hidden="true"></div>
 
-    <div class="container" id="appContainer">
+    <!-- Theme Toggle (icon only) -->
+    <button class="theme-toggle" id="themeToggle" aria-label="Toggle light/dark mode" title="Toggle theme">
+        <svg class="icon icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+        <svg class="icon icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+    </button>
 
-        <div class="logo-container">
-            <!-- Full SVG -->
-            <svg class="gamma-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1111 192">
-                <defs>
-                    <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%">
-                        <stop offset="0%" style="stop-color:#7b68ee" />
-                        <stop offset="50%" style="stop-color:#9370db" />
-                        <stop offset="100%" style="stop-color:#6a5acd" />
-                    </linearGradient>
-                </defs>
+    <!-- Main Content -->
+    <main>
+        <div class="card" id="appCard">
 
-                <path fill="url(#logoGradient)"
-                      d="M47.2,14.4c-14.4,8.2-26,19.6-34.4,33.6C4.3,62.1,0,77.7,0,94.3s4.3,32.2,12.7,46.3
-                         c8.5,14.1,20,25.4,34.4,33.6c14.4,8.2,30.4,12.4,47.7,12.4h69.8v-112.5h-81v39.1h38.2v31.8h-25.6
-                         c-9.1,0-17.6-2.3-25.2-6.9c-7.6-4.6-13.8-10.8-18.3-18.4c-4.5-7.7-6.7-16.2-6.7-25.3s2.3-17.7,6.7-25.3
-                         c4.5-7.7,10.6-13.9,18.3-18.4c7.6-4.6,16.1-6.9,25.2-6.9h68.5V2h-69.8C77.6,2,61.6,6.2,47.2,14.4z">
-                </path>
+            <!-- Header -->
+            <header class="header">
+                <div class="logo-mark" aria-hidden="true">G</div>
+                <h1>Gamma Watermark Remover</h1>
+                <p>Remove <strong>"Made with Gamma"</strong> branding from PDF, PPTX, Keynote &amp; PNG exports</p>
+            </header>
 
-                <path fill="url(#logoGradient)"
-                      d="M267.6.2c-42.7,0-77.4,34.8-77.4,77.6v108.8h42v-54.6h70.8v54.6h42V77.8C345,35,310.3.2,267.6.2z
-                         M303,93h-70.8v-15.3c0-19.6,15.9-35.5,35.4-35.5s35.4,15.9,35.4,35.5V93z">
-                </path>
 
-                <path fill="url(#logoGradient)"
-                      d="M576.4,0c-32.1,0-58.2,26.2-58.2,58.4v74.2c0,8.7-7,15.7-15.7,15.7s-15.7-7-15.7-15.7V58.5
-                         c0-32.2-26.1-58.4-58.2-58.4S368.5,26.2,368.5,58.4v128.2H411V58.5c0-8.7,7-15.7,15.7-15.7s15.7,7,15.7,15.7v74.1
-                         c0,32.2,26.1,58.4,58.2,58.4s58.2-26.2,58.2-58.4V58.4c0-8.7,7-15.7,15.7-15.7s15.7,7,15.7,15.7v128.3h42.6V58.4
-                         C634.6,26.2,608.5,0,576.4,0z">
-                </path>
 
-                <path fill="url(#logoGradient)"
-                      d="M1033.1.3c-42.7,0-77.4,34.8-77.4,77.6v108.8h42v-54.6h70.8v54.6h42V77.9c0-42.8-34.7-77.6-77.4-77.6z
-                         M1068.5,93.2h-70.8v-15.3c0-19.6,15.9-35.5,35.4-35.5s35.4,15.9,35.4,35.5V93.2z">
-                </path>
+            <!-- Upload Form (posts to batch API; JS intercepts for live feedback) -->
+            <form id="uploadForm" action="/api/remove_watermarks" method="post" enctype="multipart/form-data">
 
-                <path fill="url(#logoGradient)"
-                      d="M872,0c-32.1,0-58.2,26.2-58.2,58.4v74.2c0,8.7-7,15.7-15.7,15.7s-15.7-7-15.7-15.7V58.4
-                         c0-32.2-26.1-58.4-58.2-58.4s-58.2,26.2-58.2,58.4v128.3h42.6V58.4c0-8.7,7-15.7,15.7-15.7s15.7,7,15.7,15.7v74.2
-                         c0,32.2,26.1,58.4,58.2,58.4s58.2-26.2,58.2-58.4V58.4c0-8.7,7-15.7,15.7-15.7s15.7,7,15.7,15.7v128.3h42.6V58.4
-                         C930.2,26.2,904.1,0,872,0z">
-                </path>
-            </svg>
+                <!-- Drop Zone -->
+                <div class="drop-zone" id="dropZone" role="button" tabindex="0"
+                     aria-label="Upload area. Click or drag files here.">
+                    <input type="file" name="files" class="drop-zone__input" accept=".pdf,.pptx,.key,.zip,.png,image/png"
+                           id="fileInput" multiple aria-label="Choose PDF, PPTX, Keynote, ZIP or PNG files" />
+                    <input type="file" id="folderInput" webkitdirectory directory style="display: none;" aria-label="Choose a folder of PNG slides" />
 
-            <h1>AI Watermark Remover</h1>
-        </div>
+                    <!-- Drag-over overlay for populated queue -->
+                    <div class="drop-zone__drag-overlay">
+                        <svg style="width: 44px; height: 44px; color: var(--accent-light);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+                        <div class="drop-zone__prompt">Drop to add files to queue</div>
+                    </div>
 
-        <form id="uploadForm" action="/remove_watermark" method="post" enctype="multipart/form-data">
-            <div class="file-upload-wrapper" id="dropZone">
-                <input type="file" name="pdf_file" class="file-upload-input" accept=".pdf,.pptx" id="pdfFile" required>
-                <div class="file-upload-button" id="fileButton">
-                    <i class="fas fa-cloud-upload-alt"></i> Choose PDF or PowerPoint File
+                    <!-- Default state -->
+                    <div class="drop-zone__default">
+                        <svg class="drop-zone__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242M12 12v9M9 15l3-3 3 3"/></svg>
+                        <div class="drop-zone__prompt">Drop your files/folder here or <strong>click to browse</strong></div>
+                        <div class="drop-zone__hint">Supports PDF, PPTX, Keynote (.key, macOS only), PNG ZIP or Folders <span class="hint-shortcut" id="hintShortcutUpload"></span></div>
+                    </div>
+
+                    <!-- File selected/queue state -->
+                    <div class="drop-zone__file-info" id="fileQueue">
+                        <!-- Queue header: count + clear all -->
+                        <div class="queue-header" id="queueHeader" style="display:none;">
+                            <span class="queue-count-badge" id="queueCountBadge">0 files</span>
+                            <button type="button" class="btn-clear-queue" id="clearQueueBtn" aria-label="Remove all files">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                                Clear All
+                            </button>
+                        </div>
+                        <div id="queueList"></div>
+                        <div class="queue-actions">
+                            <button type="button" class="btn-add-more" id="addMoreFilesBtn">
+                                <svg style="width:13px;height:13px;flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5v14"/></svg>
+                                <span>Add Files</span>
+                            </button>
+                            <button type="button" class="btn-add-more" id="addFolderBtn" style="border-color: var(--accent-light); color: var(--accent-light);">
+                                <svg style="width:13px;height:13px;flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                                <span>Add Folder</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
-                <span class="file-upload-text" id="fileNameText">No file chosen.</span>
-                <span class="file-type-hint">Supports PDF and PowerPoint (.pptx) files</span>
-            </div>
 
-            <button type="submit" id="submitBtn"><i class="fas fa-magic"></i> Remove Watermark</button>
-        </form>
+                <!-- File size warning -->
+                <div class="size-warning" id="sizeWarning" role="alert">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    <span id="sizeWarningText"></span>
+                </div>
 
-        <div id="notification-area">
-            {% if error_message %}
-                <div class="notification error show"><i class="fas fa-times-circle"></i> {{ error_message }}</div>
-            {% endif %}
-            {% if success_message %}
-                <div class="notification success show"><i class="fas fa-check-circle"></i> {{ success_message }}</div>
-            {% endif %}
-            {% if download_filename %}
-                {% if file_type == 'pptx' %}
-                <a href="/download/{{ download_filename }}" class="download-btn">
-                    <i class="fas fa-download"></i> Download Processed PowerPoint
-                </a>
-                {% else %}
-                <a href="/download/{{ download_filename }}" class="download-btn">
-                    <i class="fas fa-download"></i> Download Processed PDF
+                <!-- Submit -->
+                <button type="submit" class="btn-submit" id="submitBtn" disabled>
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="m5 3 1 2.5L8.5 6 6 7l-1 2.5L4 7l-2.5-1L4 5.5Z"/><path d="m19 17 1 2.5 2.5.5-2.5 1-1 2.5-1-2.5-2.5-1 2.5-.5Z"/></svg>
+                    <span>Remove Watermark</span>
+                    <span class="btn-shortcut" id="btnShortcutSubmit"></span>
+                </button>
+            </form>
+
+            <!-- Results Area -->
+            <div class="notification-area" id="notificationArea" aria-live="polite">
+                {% if error_message %}
+                <div class="notification error">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></svg>
+                    <span>{{ error_message }}</span>
+                </div>
+                {% endif %}
+
+                {% if success_message %}
+                <div class="notification {% if download_filename %}success{% else %}info{% endif %}">
+                    {% if download_filename %}
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+                    {% else %}
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+                    {% endif %}
+                    <span>{{ success_message }}</span>
+                </div>
+                {% if download_filename %}
+                <a href="/download/{{ download_filename }}" class="btn-download" id="downloadBtn">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                    {% if file_type == 'pptx' %}Download Processed PPTX{% else %}Download Processed PDF{% endif %}
+                    <span class="btn-shortcut" id="btnShortcutDownload"></span>
                 </a>
                 {% endif %}
-            {% endif %}
-        </div>
-
-        <!-- Overlay (spinner removed, progress bar only) -->
-        <div class="overlay" id="overlay">
-            <div class="overlay-text" id="overlayText">Uploading & processing...</div>
-            <div class="progress-wrap">
-                <div class="progress-bar" id="progressBar"></div>
+                {% endif %}
             </div>
+
+            <!-- Processing History -->
+            <section class="history-section" id="historySection" style="display:none;">
+                <div class="history-header">
+                    <button class="history-toggle" id="historyToggle" aria-expanded="false" aria-controls="historyList">
+                        <span>Recent Files</span>
+                        <span id="historyCount" class="history-count-badge"></span>
+                        <svg class="icon icon-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                    </button>
+                    <button class="history-clear" id="historyClear" title="Clear all history">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2M10 11v6M14 11v6"/></svg> Clear All
+                    </button>
+                </div>
+                <ul class="history-list" id="historyList" role="list"></ul>
+            </section>
+
+            <!-- Processing Overlay -->
+            <div class="overlay" id="overlay" role="alert" aria-live="assertive">
+                <div class="overlay__spinner"></div>
+                <div class="overlay__text" id="overlayText">Uploading…</div>
+                <div class="overlay__subtext" id="overlaySubtext" style="font-size: 0.85rem; color: var(--text-muted); margin-top: -10px; text-align: center; max-width: 80%; width: 80%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></div>
+                <div class="overlay__progress-wrap">
+                    <div class="overlay__progress-bar" id="progressBar"></div>
+                </div>
+                <div class="overlay__elapsed" id="overlayElapsed"></div>
+            </div>
+
         </div>
+    </main>
 
-    </div>
+    <!-- Footer -->
+    <footer class="footer">
+        <div>v2.5.0 · <a href="https://github.com/DedInc/gamma-ai-watermark-remover" target="_blank" rel="noopener">GitHub</a></div>
+        <div>For educational purposes only. Not affiliated with Gamma.</div>
+    </footer>
 
+    <!-- ============================
+         JavaScript
+         ============================ -->
     <script>
-        (function () {
-            const form = document.getElementById("uploadForm");
-            const fileInput = document.getElementById("pdfFile");
-            const fileNameText = document.getElementById("fileNameText");
-            const dropZone = document.getElementById("dropZone");
-            const overlay = document.getElementById("overlay");
-            const progressBar = document.getElementById("progressBar");
-            const overlayText = document.getElementById("overlayText");
-            const notificationArea = document.getElementById("notification-area");
-            const submitBtn = document.getElementById("submitBtn");
+    (function () {
+        'use strict';
 
-            function showOverlay() {
-                overlay.classList.add("show");
-                progressBar.style.width = "0%";
-            }
-            function hideOverlay() {
-                overlay.classList.remove("show");
-                progressBar.style.width = "0%";
-            }
+        /* ── Platform Detection ───────────────────────── */
+        const isMac = /Mac|iPhone|iPad|iPod/.test(navigator.userAgentData?.platform || navigator.platform || '');
+        const modSymbol = isMac ? '⌘' : 'Ctrl';
 
-            function updateFileName(file) {
-                fileNameText.textContent = file ? file.name : "No file chosen.";
-            }
+        /* ── DOM refs ─────────────────────────────────── */
+        const html         = document.documentElement;
+        const form         = document.getElementById('uploadForm');
+        const fileInput    = document.getElementById('fileInput');
+        const dropZone     = document.getElementById('dropZone');
+        const submitBtn    = document.getElementById('submitBtn');
+        const fileClear    = document.getElementById('fileClear');
+        const fileName     = document.getElementById('fileName');
+        const fileSize     = document.getElementById('fileSize');
+        const fileThumb    = document.getElementById('fileThumb');
+        const fileFallback = document.getElementById('fileFallback');
+        const fileFallbackLabel = document.getElementById('fileFallbackLabel');
+        const sizeWarning  = document.getElementById('sizeWarning');
+        const sizeWarnText = document.getElementById('sizeWarningText');
+        const overlay      = document.getElementById('overlay');
+        const overlayText  = document.getElementById('overlayText');
+        const progressBar  = document.getElementById('progressBar');
+        const overlayElap  = document.getElementById('overlayElapsed');
+        const notifArea    = document.getElementById('notificationArea');
+        const histSection  = document.getElementById('historySection');
+        const histToggle   = document.getElementById('historyToggle');
+        const histList     = document.getElementById('historyList');
+        const histCount    = document.getElementById('historyCount');
+        const historyClear = document.getElementById('historyClear');
+        const themeToggle  = document.getElementById('themeToggle');
+        const folderInput  = document.getElementById('folderInput');
+        const addFolderBtn = document.getElementById('addFolderBtn');
 
-            fileInput.addEventListener("change", function () {
-                updateFileName(this.files[0]);
-            });
+        let selectedFiles = [];
+        let pendingPngFiles = []; // accumulates all individual PNGs for incremental bundling
 
-            ["dragenter", "dragover"].forEach(ev => {
-                dropZone.addEventListener(ev, (e) => {
-                    e.preventDefault();
-                    dropZone.classList.add("drag-over");
+        const SIZE_WARN   = 100 * 1024 * 1024;  // 100 MB
+        const SIZE_DANGER  = 500 * 1024 * 1024;  // 500 MB
+
+        /* ── SVG Icons ────────────────────────────────── */
+        const SVGS = {
+            pdf: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4M9 15h6M9 11h6M9 19h6"/></svg>`,
+            pptx: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4M10 9H8v8h2M16 9h-2v8h2M13 13h-3"/></svg>`,
+            key: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/></svg>`,
+            zip: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg>`,
+            png: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>`,
+            clear: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>`,
+            success: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>`,
+            info: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>`,
+            error: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></svg>`,
+            download: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>`,
+            clock: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>`
+        };
+
+        /* ── Keyboard Hints initialization ────────────── */
+        const btnShortcutSubmit = document.getElementById('btnShortcutSubmit');
+        const hintShortcutUpload = document.getElementById('hintShortcutUpload');
+        if (btnShortcutSubmit) btnShortcutSubmit.textContent = modSymbol + ' + ↵';
+        if (hintShortcutUpload) hintShortcutUpload.textContent = `(${modSymbol} + U)`;
+
+        const initialDlShortcut = document.getElementById('btnShortcutDownload');
+        if (initialDlShortcut) initialDlShortcut.textContent = modSymbol + ' + D';
+
+        /* ── Utilities ────────────────────────────────── */
+        function formatBytes(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+            return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+        }
+
+        function getExt(name) {
+            return (name || '').split('.').pop().toLowerCase();
+        }
+
+        /** Escape a string for safe interpolation into innerHTML. */
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function formatTime(sec) {
+            const m = Math.floor(sec / 60);
+            const s = sec % 60;
+            return m > 0 ? `${m}m ${s}s` : `${s}s`;
+        }
+
+        /* ── Particles ────────────────────────────────── */
+        function createParticles(count) {
+            const container = document.querySelector('.bg-gradient');
+            for (let i = 0; i < count; i++) {
+                const p = document.createElement('div');
+                p.className = 'particle';
+                const size = Math.random() * 3 + 1.5;
+                const duration = Math.random() * 12 + 8;
+                const delay = Math.random() * duration;
+                const left = Math.random() * 100;
+                Object.assign(p.style, {
+                    width: size + 'px',
+                    height: size + 'px',
+                    left: left + '%',
+                    animation: `particleFloat ${duration}s ${delay}s infinite linear`
                 });
-            });
+                container.appendChild(p);
+            }
+        }
+        createParticles(25);
 
-            ["dragleave", "drop"].forEach(ev => {
-                dropZone.addEventListener(ev, (e) => {
-                    e.preventDefault();
-                    dropZone.classList.remove("drag-over");
+        /* ── Theme Toggle ─────────────────────────────── */
+        function setTheme(theme) {
+            html.setAttribute('data-theme', theme);
+            localStorage.setItem('gamma-theme', theme);
+        }
 
-                    if (ev === "drop" && e.dataTransfer.files.length) {
-                        fileInput.files = e.dataTransfer.files;
-                        updateFileName(e.dataTransfer.files[0]);
-                    }
-                });
-            });
+        const savedTheme = localStorage.getItem('gamma-theme') || 'dark';
+        setTheme(savedTheme);
 
-            form.addEventListener("submit", function (e) {
-                e.preventDefault();
+        themeToggle.addEventListener('click', () => {
+            setTheme(html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+        });
 
-                if (!fileInput.files.length) {
-                    notificationArea.innerHTML =
-                        '<div class="notification error show"><i class="fas fa-times-circle"></i> Select a PDF or PowerPoint file first.</div>';
-                    return;
+        /* ── Thumbnail Generation ─────────────────────── */
+        async function generateThumbnail(file) {
+            const ext = getExt(file.name);
+            try {
+                if (ext === 'pdf') {
+                    return await generatePDFThumbnail(file);
+                } else if (ext === 'pptx') {
+                    return await generatePPTXThumbnail(file);
+                } else if (ext === 'key') {
+                    return await generateKeynoteThumbnail(file);
+                } else if (ext === 'png') {
+                    return URL.createObjectURL(file);
                 }
+            } catch (err) {
+                console.debug('Thumbnail generation failed:', err);
+            }
+            return null;
+        }
 
-                submitBtn.disabled = true;
-                showOverlay();
-                overlayText.textContent = "Uploading...";
+        async function generatePDFThumbnail(file) {
+            if (typeof pdfjsLib === 'undefined') return null;
+            pdfjsLib.GlobalWorkerOptions.workerSrc =
+                'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-                const xhr = new XMLHttpRequest();
-                xhr.open("POST", form.action);
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            const page = await pdf.getPage(1);
+            const viewport = page.getViewport({ scale: 0.25 });
+            const canvas = document.createElement('canvas');
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            const ctx = canvas.getContext('2d');
+            await page.render({ canvasContext: ctx, viewport }).promise;
+            return canvas.toDataURL('image/jpeg', 0.75);
+        }
 
-                xhr.upload.onprogress = function (e) {
-                    if (e.lengthComputable) {
-                        const percent = Math.round((e.loaded / e.total) * 100);
-                        progressBar.style.width = percent + "%";
-                        overlayText.textContent = `Uploading... ${percent}%`;
+        async function generatePPTXThumbnail(file) {
+            if (typeof JSZip === 'undefined') return null;
+            const zip = await JSZip.loadAsync(file);
+            // PPTX files store a thumbnail at docProps/thumbnail.jpeg
+            const thumb = zip.file('docProps/thumbnail.jpeg') || zip.file('docProps/thumbnail.png');
+            if (thumb) {
+                const blob = await thumb.async('blob');
+                return URL.createObjectURL(blob);
+            }
+            return null;
+        }
+
+        async function generateKeynoteThumbnail(file) {
+            if (typeof JSZip === 'undefined') return null;
+            const zip = await JSZip.loadAsync(file);
+            // Keynote files store a thumbnail inside QuickLook/Thumbnail.jpg or QuickLook/Thumbnail.png
+            const thumb = zip.file('QuickLook/Thumbnail.jpg') || zip.file('QuickLook/Thumbnail.png') || zip.file('QuickLook/Thumbnail.jpeg');
+            if (thumb) {
+                const blob = await thumb.async('blob');
+                return URL.createObjectURL(blob);
+            }
+            return null;
+        }
+
+        function showThumbnail(dataUrl) {
+            // Remove fallback, show actual thumbnail
+            const img = document.createElement('img');
+            img.src = dataUrl;
+            img.alt = 'File preview';
+            fileThumb.innerHTML = '';
+            fileThumb.appendChild(img);
+        }
+
+        function resetThumbnail() {
+            fileThumb.innerHTML = '';
+            fileThumb.appendChild(fileFallback);
+        }
+
+        /* ── File Selection & Queue Handling ──────────── */
+        // Traverse HTML5 directory entries recursively
+        async function getFilesFromEntry(entry, path = '') {
+            const files = [];
+            const currentPath = path ? `${path}/${entry.name}` : entry.name;
+            if (entry.isFile) {
+                const file = await new Promise((resolve) => entry.file(resolve));
+                file.relativePath = path; // Attach relative path
+                files.push(file);
+            } else if (entry.isDirectory) {
+                const reader = entry.createReader();
+                const entries = await new Promise((resolve) => reader.readEntries(resolve));
+                for (const childEntry of entries) {
+                    const childFiles = await getFilesFromEntry(childEntry, currentPath);
+                    files.push(...childFiles);
+                }
+            }
+            return files;
+        }
+
+        // Zips a list of PNG files on the fly and queues it as a single zip archive.
+        // Uses pendingPngFiles accumulator so multiple "Add Files" rounds all merge into one zip.
+        async function bundlePngFilesToZip(pngFiles) {
+            // Merge new PNGs into the accumulator (deduplicate by name+size)
+            for (const f of pngFiles) {
+                const dup = pendingPngFiles.some(p => p.name === f.name && p.size === f.size);
+                if (!dup) pendingPngFiles.push(f);
+            }
+
+            // Remove any existing slides_archive.zip from the queue so we replace it
+            selectedFiles = selectedFiles.filter(f => f.name !== 'slides_archive.zip');
+
+            overlay.classList.add('show');
+            overlayText.textContent = `Packaging slides…`;
+            const subtext = document.getElementById('overlaySubtext');
+            if (subtext) subtext.textContent = `Bundling ${pendingPngFiles.length} PNG slide(s) into slides_archive.zip`;
+            progressBar.style.width = '50%';
+
+            try {
+                const zip = new JSZip();
+                for (const file of pendingPngFiles) {
+                    const arrayBuffer = await file.arrayBuffer();
+                    zip.file(file.name, arrayBuffer);
+                }
+                const zipBlob = await zip.generateAsync({ type: 'blob' });
+                const zipFile = new File([zipBlob], `slides_archive.zip`, { type: 'application/zip' });
+                selectedFiles.push(zipFile);
+                renderQueue();
+                const total = pendingPngFiles.length;
+                showToast(`Bundled ${total} PNG slide${total !== 1 ? 's' : ''} into slides_archive.zip`, 'success');
+            } catch (err) {
+                console.error(err);
+                showToast(`Failed to bundle images: ${err.message}`, 'error');
+            } finally {
+                overlay.classList.remove('show');
+            }
+        }
+
+        // Zips a traversed folder on the fly and queues it
+        async function bundleFolderToZip(folderName, files) {
+            const pngFiles = files.filter(f => getExt(f.name) === 'png');
+            if (pngFiles.length === 0) {
+                showToast(`No PNG images found in folder '${folderName}'.`, 'error');
+                return;
+            }
+
+            overlay.classList.add('show');
+            overlayText.textContent = `Packaging folder…`;
+            const subtext = document.getElementById('overlaySubtext');
+            if (subtext) subtext.textContent = `Creating ZIP from '${folderName}' (${pngFiles.length} PNGs)`;
+            progressBar.style.width = '50%';
+
+            try {
+                const zip = new JSZip();
+                for (const file of pngFiles) {
+                    const arrayBuffer = await file.arrayBuffer();
+                    const zipPath = file.relativePath ? `${file.relativePath}/${file.name}` : file.name;
+                    zip.file(zipPath, arrayBuffer);
+                }
+                const zipBlob = await zip.generateAsync({ type: 'blob' });
+                const zipFile = new File([zipBlob], `${folderName || 'slides'}.zip`, { type: 'application/zip' });
+                
+                selectedFiles.push(zipFile);
+                renderQueue();
+                showToast(`Successfully packaged folder '${folderName}'!`, 'success');
+            } catch (err) {
+                console.error(err);
+                showToast(`Failed to package folder: ${err.message}`, 'error');
+            } finally {
+                overlay.classList.remove('show');
+            }
+        }
+
+        function addFilesToQueue(filesList) {
+            let hasKeyFile = false;
+            for (let i = 0; i < filesList.length; i++) {
+                const file = filesList[i];
+                const ext = getExt(file.name);
+                if (ext === 'pdf' || ext === 'pptx' || ext === 'key' || ext === 'zip' || ext === 'png') {
+                    const alreadyExists = selectedFiles.some(f => f.name === file.name && f.size === file.size);
+                    if (!alreadyExists) {
+                        selectedFiles.push(file);
+                        if (ext === 'key') {
+                            hasKeyFile = true;
+                        }
                     }
+                } else {
+                    showToast(`Unsupported file type: ${file.name}. Supported: PDF, PPTX, Keynote (.key), ZIP, PNG images, Folders.`, 'error');
+                }
+            }
+
+            renderQueue();
+            fileInput.value = '';
+
+            if (hasKeyFile) {
+                showToast("For Keynote (.key) conversion, please keep the Keynote app open on your Mac for a seamless experience.", "info");
+            }
+        }
+
+        function removeFile(idx) {
+            const removed = selectedFiles[idx];
+            // If the slides_archive.zip is removed, also clear the pending PNG accumulator
+            if (removed && (removed.name === 'slides_archive.zip' || removed.name.endsWith('.zip'))) {
+                pendingPngFiles = [];
+            }
+            selectedFiles.splice(idx, 1);
+            renderQueue();
+
+            // Clear temporary warnings/info messages if no longer applicable
+            const hasKeyFile = selectedFiles.some(f => getExt(f.name) === 'key');
+            if (hasKeyFile) {
+                showToast("For Keynote (.key) conversion, please keep the Keynote app open on your Mac for a seamless experience.", "info");
+            } else {
+                const hasTempNotification = notifArea.querySelector('.notification.info') || notifArea.querySelector('.notification.success');
+                if (hasTempNotification) {
+                    notifArea.innerHTML = '';
+                }
+            }
+        }
+
+        function clearFileQueue() {
+            selectedFiles = [];
+            pendingPngFiles = [];
+            renderQueue();
+        }
+
+        function renderQueue() {
+            const queueContainer = document.getElementById('fileQueue');
+            const defaultContainer = document.querySelector('.drop-zone__default');
+            const queueHeader = document.getElementById('queueHeader');
+            const queueCountBadge = document.getElementById('queueCountBadge');
+
+            if (selectedFiles.length === 0) {
+                fileInput.value = '';
+                dropZone.classList.remove('has-file');
+                submitBtn.disabled = true;
+                submitBtn.querySelector('span').textContent = 'Remove Watermark';
+                sizeWarning.className = 'size-warning';
+                queueContainer.style.display = 'none';
+                if (queueHeader) queueHeader.style.display = 'none';
+                defaultContainer.style.display = 'block';
+                return;
+            }
+
+            defaultContainer.style.display = 'none';
+            queueContainer.style.display = 'flex';
+            dropZone.classList.add('has-file');
+            submitBtn.disabled = false;
+            submitBtn.querySelector('span').textContent = `Remove Watermarks (${selectedFiles.length} file${selectedFiles.length > 1 ? 's' : ''})`;
+
+            // Show queue header with count + clear all
+            if (queueHeader) {
+                queueHeader.style.display = 'flex';
+                const n = selectedFiles.length;
+                queueCountBadge.textContent = `${n} file${n !== 1 ? 's' : ''} queued`;
+            }
+
+            // Size warnings
+            let totalSize = 0;
+            let hasDanger = false;
+            let hasWarn = false;
+            for (const f of selectedFiles) {
+                totalSize += f.size;
+                if (f.size >= SIZE_DANGER) hasDanger = true;
+                else if (f.size >= SIZE_WARN) hasWarn = true;
+            }
+
+            sizeWarning.className = 'size-warning';
+            if (hasDanger) {
+                sizeWarnText.textContent = `Large files detected — processing may take a moment. Please be patient!`;
+                sizeWarning.classList.add('danger');
+            } else if (hasWarn) {
+                sizeWarnText.textContent = `Large files detected — processing may take a moment.`;
+                sizeWarning.classList.add('warn');
+            }
+
+            const queueList = document.getElementById('queueList');
+            queueList.innerHTML = selectedFiles.map((file, idx) => {
+                const ext = getExt(file.name);
+                const fileIconSvg = ext === 'pdf' ? SVGS.pdf
+                                  : ext === 'pptx' ? SVGS.pptx
+                                  : ext === 'key'  ? SVGS.key
+                                  : ext === 'png'  ? SVGS.png
+                                  : SVGS.zip;
+                const extLabel = escapeHtml(ext.toUpperCase());
+                const safeName = escapeHtml(file.name);
+                return `
+                <div class="queue-item" data-index="${idx}">
+                    <div class="file-thumb" id="thumb-${idx}">
+                        <div class="file-thumb__fallback ${escapeHtml(ext)}">
+                            ${fileIconSvg}
+                            <span>${extLabel}</span>
+                        </div>
+                    </div>
+                    <div class="file-meta">
+                        <div class="file-meta__name" title="${safeName}">${safeName}</div>
+                        <div class="file-meta__size">${escapeHtml(formatBytes(file.size))}</div>
+                    </div>
+                    <button type="button" class="file-clear" data-remove="${idx}" aria-label="Remove file">
+                        ${SVGS.clear}
+                    </button>
+                </div>`;
+            }).join('');
+
+            // Attach remove handlers
+            queueList.querySelectorAll('[data-remove]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const idx = parseInt(btn.dataset.remove);
+                    removeFile(idx);
+                });
+            });
+
+            // Load thumbnails in background
+            selectedFiles.forEach((file, idx) => {
+                generateThumbnail(file).then(url => {
+                    if (url) {
+                        const thumbEl = document.getElementById(`thumb-${idx}`);
+                        if (thumbEl) {
+                            thumbEl.innerHTML = `<img src="${url}" alt="File preview" style="width:100%; height:100%; object-fit:cover; display:block;" />`;
+                        }
+                    }
+                });
+            });
+        }
+
+        fileInput.addEventListener('change', async () => {
+            if (!fileInput.files.length) return;
+            const files = Array.from(fileInput.files);
+            // If ALL selected files are PNGs (and there are multiple), auto-bundle into ZIP
+            const allPng = files.every(f => getExt(f.name) === 'png');
+            if (allPng && files.length > 1) {
+                await bundlePngFilesToZip(files);
+            } else {
+                addFilesToQueue(files);
+            }
+            fileInput.value = '';
+        });
+
+        if (folderInput) {
+            folderInput.addEventListener('change', async () => {
+                if (folderInput.files.length) {
+                    let folderName = 'slides';
+                    const firstFile = folderInput.files[0];
+                    if (firstFile.webkitRelativePath) {
+                        folderName = firstFile.webkitRelativePath.split('/')[0];
+                    }
+                    await bundleFolderToZip(folderName, Array.from(folderInput.files));
+                    folderInput.value = '';
+                }
+            });
+        }
+
+        // Clear All queue button
+        const clearQueueBtn = document.getElementById('clearQueueBtn');
+        if (clearQueueBtn) {
+            clearQueueBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                clearFileQueue();
+                notifArea.innerHTML = '';
+            });
+        }
+
+        const addMoreFilesBtn = document.getElementById('addMoreFilesBtn');
+        if (addMoreFilesBtn) {
+            addMoreFilesBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                fileInput.click();
+            });
+        }
+
+        if (addFolderBtn) {
+            addFolderBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                folderInput.click();
+            });
+        }
+
+        // Keyboard/Focus Handling
+        const preventFilePickerOnModEnter = (e) => {
+            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (!submitBtn.disabled) submitBtn.click();
+            }
+        };
+
+        fileInput.addEventListener('keydown', preventFilePickerOnModEnter);
+
+        dropZone.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (!submitBtn.disabled) submitBtn.click();
+            } else if ((e.key === 'Enter' || e.key === ' ') && !e.metaKey && !e.ctrlKey) {
+                e.preventDefault();
+                fileInput.click();
+            }
+        });
+
+        /* ── Drag & Drop ──────────────────────────────── */
+        ['dragenter', 'dragover'].forEach(ev => {
+            dropZone.addEventListener(ev, (e) => {
+                e.preventDefault();
+                dropZone.classList.add('drag-over');
+            });
+        });
+
+        ['dragleave', 'drop'].forEach(ev => {
+            dropZone.addEventListener(ev, async (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('drag-over');
+                if (ev === 'drop') {
+                    const items = e.dataTransfer.items;
+                    if (items && items.length > 0) {
+                        const filesList = [];
+                        let hasDir = false;
+                        for (let i = 0; i < items.length; i++) {
+                            const entry = items[i].webkitGetAsEntry ? items[i].webkitGetAsEntry() : null;
+                            if (entry) {
+                                if (entry.isDirectory) {
+                                    hasDir = true;
+                                    await bundleFolderToZip(entry.name, await getFilesFromEntry(entry));
+                                } else {
+                                    const file = items[i].getAsFile();
+                                    if (file) filesList.push(file);
+                                }
+                            } else {
+                                const file = items[i].getAsFile();
+                                if (file) filesList.push(file);
+                            }
+                        }
+                        if (filesList.length > 0) {
+                            // If all non-directory files are PNGs and there are 2+, auto-bundle
+                            const allPng = filesList.every(f => getExt(f.name) === 'png');
+                            if (allPng && filesList.length > 1) {
+                                await bundlePngFilesToZip(filesList);
+                            } else {
+                                addFilesToQueue(filesList);
+                            }
+                        }
+                    } else if (e.dataTransfer.files.length) {
+                        const files = Array.from(e.dataTransfer.files);
+                        const allPng = files.every(f => getExt(f.name) === 'png');
+                        if (allPng && files.length > 1) {
+                            await bundlePngFilesToZip(files);
+                        } else {
+                            addFilesToQueue(files);
+                        }
+                    }
+                }
+            });
+        });
+
+        /* ── Form Submission (Sequential Processing) ── */
+        let startTime = 0;
+        let elapsedTimer = null;
+
+        function showToast(message, type = 'error') {
+            const iconSvg = type === 'error' ? SVGS.error 
+                          : type === 'success' ? SVGS.success 
+                          : SVGS.info;
+            const safeType = escapeHtml(type);
+            notifArea.innerHTML = `
+                <div class="notification ${safeType}">
+                    ${iconSvg}
+                    <span>${escapeHtml(message)}</span>
+                </div>`;
+            notifArea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function uploadAndProcessSingleFile(file, onProgress) {
+            return new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', '/api/remove_watermarks');
+
+                xhr.upload.onprogress = function (ev) {
+                    if (ev.lengthComputable) {
+                        const pct = Math.round((ev.loaded / ev.total) * 100);
+                        onProgress(pct);
+                    }
+                };
+
+                xhr.upload.onload = function () {
+                    onProgress(100);
+                    overlayText.textContent = `Processing…`;
+                    let subtext = `Removing branding from ${file.name}…`;
+                    if (getExt(file.name) === 'key') {
+                        subtext += ` (converting via Keynote app, please wait)`;
+                    }
+                    document.getElementById('overlaySubtext').textContent = subtext;
                 };
 
                 xhr.onload = function () {
-                    overlayText.textContent = "Processing...";
-                    progressBar.style.width = "100%";
-
-                    setTimeout(() => {
-                        const doc = new DOMParser().parseFromString(xhr.responseText, "text/html");
-                        notificationArea.innerHTML = doc.querySelector("#notification-area").innerHTML;
-                        hideOverlay();
-                        submitBtn.disabled = false;
-                    }, 500);
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        try {
+                            const res = JSON.parse(xhr.responseText);
+                            if (res.results && res.results.length > 0) {
+                                resolve(res.results[0]);
+                            } else {
+                                reject(new Error('Invalid response format.'));
+                            }
+                        } catch (e) {
+                            reject(new Error('Failed to parse response.'));
+                        }
+                    } else {
+                        reject(new Error(`Server error: ${xhr.status}`));
+                    }
                 };
 
                 xhr.onerror = function () {
-                    hideOverlay();
-                    submitBtn.disabled = false;
-                    notificationArea.innerHTML =
-                        '<div class="notification error show"><i class="fas fa-times-circle"></i> Upload failed.</div>';
+                    reject(new Error('Network error.'));
                 };
 
                 const fd = new FormData();
-                fd.append("pdf_file", fileInput.files[0]);
+                fd.append('files', file);
                 xhr.send(fd);
             });
-        })();
+        }
+
+        function renderBatchResults(results) {
+            if (results.length === 0) return;
+
+            const successesWithDownloads = results.filter(r => r.success && r.download_filename);
+            const downloadFilenames = successesWithDownloads.map(r => r.download_filename);
+
+            let zipBtnHtml = '';
+            if (downloadFilenames.length >= 2) {
+                const zipQuery = encodeURIComponent(downloadFilenames.join(','));
+                zipBtnHtml = `
+                    <a href="/download_zip?files=${zipQuery}" class="btn-download-all" id="downloadZipBtn">
+                        ${SVGS.download}
+                        Download All as ZIP (${downloadFilenames.length} files)
+                    </a>`;
+            }
+
+            const cardsHtml = results.map(r => {
+                const statusClass = r.success ? (r.has_watermark ? 'success' : 'clean') : 'error';
+                const statusLabel = r.success ? (r.has_watermark ? 'Cleaned' : 'No watermark') : 'Failed';
+                const statusIconSvg = r.success ? (r.has_watermark ? SVGS.success : SVGS.info) : SVGS.error;
+                const file_type = getExt(r.filename);
+                const fileIconSvg = file_type === 'pdf'  ? SVGS.pdf
+                                  : file_type === 'pptx' ? SVGS.pptx
+                                  : file_type === 'key'  ? SVGS.key
+                                  : file_type === 'png'  ? SVGS.png
+                                  : SVGS.zip;
+
+                let statsHtml = '';
+                if (r.success && r.stats) {
+                    if (file_type === 'pdf') {
+                        statsHtml = `<span style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">Removed ${escapeHtml(r.stats.total_removed)} elements</span>`;
+                    } else if (file_type === 'pptx' || file_type === 'key') {
+                        statsHtml = `<span style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">Removed ${escapeHtml(r.stats.watermarks_removed)} watermarks</span>`;
+                    } else if (file_type === 'zip') {
+                        statsHtml = `<span style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">Cleaned ${escapeHtml(r.stats.png_cleaned)} of ${escapeHtml(r.stats.png_total)} PNG slides</span>`;
+                    } else if (file_type === 'png') {
+                        statsHtml = `<span style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">Cleaned PNG slide image</span>`;
+                    }
+                } else if (!r.success && r.error) {
+                    statsHtml = `<span style="font-size:0.7rem; color:var(--error); margin-top:2px; word-break:break-word;">${escapeHtml(r.error)}</span>`;
+                }
+
+                const dlBtn = (r.success && r.download_url) ? `
+                    <a href="${escapeHtml(r.download_url)}" class="result-card__btn-download" title="Download cleaned file">
+                        ${SVGS.download}
+                        <span>Download</span>
+                    </a>` : '';
+
+                return `
+                    <div class="result-card">
+                        <div class="result-card__info">
+                            <div class="result-card__icon ${escapeHtml(file_type)}">
+                                ${fileIconSvg}
+                            </div>
+                            <div class="result-card__details">
+                                <div class="result-card__name" title="${escapeHtml(r.filename)}">${escapeHtml(r.filename)}</div>
+                                <div class="result-card__status ${escapeHtml(statusClass)}">
+                                    ${statusIconSvg} ${escapeHtml(statusLabel)}
+                                </div>
+                                ${statsHtml}
+                            </div>
+                        </div>
+                        <div class="result-card__actions">
+                            ${dlBtn}
+                        </div>
+                    </div>`;
+            }).join('');
+
+            notifArea.innerHTML = `
+                ${zipBtnHtml}
+                <div class="result-cards-container">
+                    ${cardsHtml}
+                </div>`;
+
+            // Setup download shortcuts
+            if (successesWithDownloads.length === 1) {
+                const firstDlBtn = notifArea.querySelector('.result-card__btn-download');
+                if (firstDlBtn) {
+                    firstDlBtn.id = 'downloadBtn';
+                    const hintSpan = document.createElement('span');
+                    hintSpan.className = 'btn-shortcut';
+                    hintSpan.id = 'btnShortcutDownload';
+                    hintSpan.textContent = modSymbol + ' + D';
+                    firstDlBtn.appendChild(hintSpan);
+                }
+            } else if (downloadFilenames.length >= 2) {
+                const zipBtn = document.getElementById('downloadZipBtn');
+                if (zipBtn) {
+                    zipBtn.id = 'downloadBtn';
+                    const hintSpan = document.createElement('span');
+                    hintSpan.className = 'btn-shortcut';
+                    hintSpan.textContent = modSymbol + ' + D';
+                    zipBtn.appendChild(hintSpan);
+                }
+            }
+
+            notifArea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+            // Add results to session history
+            results.forEach(r => {
+                const file_type = getExt(r.filename);
+                if (r.success) {
+                    addToHistory(r.filename, file_type, {
+                        success: r.has_watermark,
+                        clean: !r.has_watermark,
+                        error: false,
+                        downloadUrl: r.download_url
+                    });
+                } else {
+                    addToHistory(r.filename, file_type, { error: true });
+                }
+            });
+        }
+
+        form.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            if (selectedFiles.length === 0) return;
+
+            submitBtn.disabled = true;
+            notifArea.innerHTML = '';
+
+            // Show Overlay
+            overlay.classList.add('show');
+            progressBar.style.width = '0%';
+            startTime = Date.now();
+            overlayElap.textContent = '0s';
+
+            const overlaySubtext = document.getElementById('overlaySubtext');
+            overlaySubtext.textContent = '';
+
+            elapsedTimer = setInterval(() => {
+                const sec = Math.floor((Date.now() - startTime) / 1000);
+                overlayElap.textContent = formatTime(sec);
+            }, 1000);
+
+            const results = [];
+            const total = selectedFiles.length;
+
+            for (let i = 0; i < total; i++) {
+                const file = selectedFiles[i];
+                const fileIndex = i + 1;
+
+                overlayText.textContent = `Uploading file ${fileIndex} of ${total}…`;
+                overlaySubtext.textContent = file.name;
+                progressBar.style.width = '0%';
+
+                try {
+                    const result = await uploadAndProcessSingleFile(file, (pct) => {
+                        progressBar.style.width = pct + '%';
+                        overlayText.textContent = `Uploading file ${fileIndex} of ${total} (${pct}%)`;
+                    });
+                    results.push(result);
+                } catch (err) {
+                    console.error(err);
+                    results.push({
+                        filename: file.name,
+                        success: false,
+                        error: err.message || 'Processing failed.'
+                    });
+                }
+            }
+
+            // Cleanup overlay
+            overlay.classList.remove('show');
+            progressBar.style.width = '0%';
+            if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; }
+            submitBtn.disabled = false;
+
+            // Render batch results
+            renderBatchResults(results);
+
+            // Clear the file queue
+            clearFileQueue();
+        });
+
+        /* ── Processing History (sessionStorage) ──────── */
+        function getHistory() {
+            try { return JSON.parse(sessionStorage.getItem('gamma-history') || '[]'); }
+            catch { return []; }
+        }
+
+        function saveHistory(hist) {
+            sessionStorage.setItem('gamma-history', JSON.stringify(hist.slice(0, 30)));
+        }
+
+        function addToHistory(name, ext, result) {
+            const hist = getHistory();
+            hist.unshift({
+                id: Date.now() + Math.random(), // Ensure unique ID even for fast batch operations
+                name,
+                ext,
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                status: result.error ? 'error' : (result.success ? 'success' : 'clean'),
+                downloadUrl: result.downloadUrl || null
+            });
+            saveHistory(hist);
+            renderHistory();
+        }
+
+        function deleteHistoryItem(id) {
+            const hist = getHistory().filter(item => item.id !== id);
+            saveHistory(hist);
+            renderHistory();
+        }
+
+        function clearHistory() {
+            sessionStorage.removeItem('gamma-history');
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const hist = getHistory();
+            if (hist.length === 0) {
+                histSection.style.display = 'none';
+                return;
+            }
+
+            histSection.style.display = '';
+            histCount.textContent = hist.length;
+
+            if (!histList.classList.contains('open') && !histList.dataset.userClosed) {
+                histList.classList.add('open');
+                histToggle.classList.add('open');
+                histToggle.setAttribute('aria-expanded', 'true');
+            }
+
+            histList.innerHTML = hist.map(item => {
+                const statusLabel = item.status === 'success' ? 'Cleaned' : item.status === 'clean' ? 'No watermark' : 'Failed';
+                const statusIconSvg = item.status === 'success' ? SVGS.success : item.status === 'clean' ? SVGS.info : SVGS.error;
+                const fileIconSvg = item.ext === 'pdf'  ? SVGS.pdf
+                                  : item.ext === 'pptx' ? SVGS.pptx
+                                  : item.ext === 'key'  ? SVGS.key
+                                  : item.ext === 'png'  ? SVGS.png
+                                  : SVGS.zip;
+                const iconBg = ['pdf','pptx','key','zip','png'].includes(item.ext) ? item.ext : 'pptx';
+                const extLabel = (item.ext || 'file').toUpperCase();
+
+                return `
+                <li class="history-item" data-id="${item.id}" data-status="${escapeHtml(item.status)}">
+                    <div class="history-item__icon ${escapeHtml(iconBg)}" data-ext="${escapeHtml(extLabel)}">${fileIconSvg}</div>
+                    <div class="history-item__body">
+                        <div class="history-item__name" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</div>
+                        <div class="history-item__meta">
+                            <span class="history-item__time">${SVGS.clock}${escapeHtml(item.time)}</span>
+                            <span class="history-item__status ${escapeHtml(item.status)}">${statusIconSvg}${escapeHtml(statusLabel)}</span>
+                        </div>
+                    </div>
+                    <div class="history-item__actions">
+                        ${item.downloadUrl ? `<a href="${escapeHtml(item.downloadUrl)}" class="history-item__btn" title="Re-download">${SVGS.download}</a>` : ''}
+                        <button class="history-item__btn delete" title="Remove from history" data-delete="${item.id}">${SVGS.clear}</button>
+                    </div>
+                </li>`;
+            }).join('');
+
+            histList.querySelectorAll('[data-delete]').forEach(btn => {
+                btn.addEventListener('click', () => deleteHistoryItem(Number(btn.dataset.delete)));
+            });
+        }
+
+        histToggle.addEventListener('click', () => {
+            const isOpen = histList.classList.toggle('open');
+            histToggle.classList.toggle('open', isOpen);
+            histToggle.setAttribute('aria-expanded', isOpen);
+            if (!isOpen) histList.dataset.userClosed = 'true';
+            else delete histList.dataset.userClosed;
+        });
+
+        historyClear.addEventListener('click', clearHistory);
+
+        renderHistory();
+
+        /* ── Keyboard Shortcuts ───────────────────────── */
+        document.addEventListener('keydown', (e) => {
+            const isMod = e.metaKey || e.ctrlKey;
+            if (!isMod) return;
+
+            // Mod + U → open file picker
+            if (e.key === 'u' || e.key === 'U') {
+                e.preventDefault();
+                fileInput.click();
+            }
+            // Mod + Enter → submit
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (!submitBtn.disabled) submitBtn.click();
+            }
+            // Mod + D → download
+            if (e.key === 'd' || e.key === 'D') {
+                const dlBtn = document.getElementById('downloadBtn');
+                if (dlBtn) { e.preventDefault(); dlBtn.click(); }
+            }
+        });
+
+    })();
     </script>
 </body>
 </html>
