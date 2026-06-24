@@ -1,14 +1,17 @@
-import fitz
 import logging
+
+import fitz
 
 logger = logging.getLogger(__name__)
 
 
 class WatermarkRemover:
-    def __init__(self, target_domain="gamma.app"):
+    def __init__(self, target_domain: str = "gamma.app") -> None:
         self.target_domain = target_domain
 
-    def clean_pdf_from_target_domain(self, pdf_path, output_path):
+    def clean_pdf_from_target_domain(
+        self, pdf_path: str, output_path: str
+    ) -> tuple[int, int]:
         """Cleans PDF from target domain elements"""
 
         pdf_document = fitz.open(pdf_path)
@@ -49,7 +52,9 @@ class WatermarkRemover:
 
         return total_images_removed, total_links_removed
 
-    def _has_target_link(self, obj_rect, page, target_domain):
+    def _has_target_link(
+        self, obj_rect: fitz.Rect, page: fitz.Page, target_domain: str
+    ) -> tuple[bool, str]:
         """Checks if an object has a link to the target domain"""
         for link in page.get_links():
             link_rect = fitz.Rect(link["from"])
@@ -58,7 +63,7 @@ class WatermarkRemover:
                 return True, link.get("uri", "")
         return False, ""
 
-    def _remove_all_target_links(self, page, target_domain):
+    def _remove_all_target_links(self, page: fitz.Page, target_domain: str) -> int:
         """Removes all links to the target domain"""
         removed_count = 0
         links = page.get_links()
@@ -73,8 +78,8 @@ class WatermarkRemover:
         return removed_count
 
     def _remove_corner_images_with_links(
-        self, page, target_domain, corner_threshold=0.7
-    ):
+        self, page: fitz.Page, target_domain: str, corner_threshold: float = 0.7
+    ) -> int:
         """Removes images in the bottom right corner with target links"""
         page_rect = page.rect
         right_threshold = page_rect.width * corner_threshold
@@ -82,7 +87,8 @@ class WatermarkRemover:
 
         logger.debug(f"    Page size: {page_rect.width:.0f}x{page_rect.height:.0f}")
         logger.debug(
-            f"    Right edge threshold: {right_threshold:.0f}, bottom edge threshold: {bottom_threshold:.0f}"
+            f"    Right edge threshold: {right_threshold:.0f}, "
+            f"bottom edge threshold: {bottom_threshold:.0f}"
         )
 
         removed_count = 0
@@ -99,14 +105,18 @@ class WatermarkRemover:
 
             for img_rect in img_rects:
                 logger.debug(
-                    f"    Image xref:{xref} position: ({img_rect.x0:.0f}, {img_rect.y0:.0f}) size: {img_rect.width:.0f}x{img_rect.height:.0f}"
+                    f"    Image xref:{xref} position: "
+                    f"({img_rect.x0:.0f}, {img_rect.y0:.0f}) size: "
+                    f"{img_rect.width:.0f}x{img_rect.height:.0f}"
                 )
 
                 is_in_corner = (
                     img_rect.x0 >= right_threshold and img_rect.y0 >= bottom_threshold
                 )
                 logger.debug(
-                    f"      In corner: {is_in_corner} (x0={img_rect.x0:.0f}>={right_threshold:.0f}, y0={img_rect.y0:.0f}>={bottom_threshold:.0f})"
+                    f"      In corner: {is_in_corner} "
+                    f"(x0={img_rect.x0:.0f}>={right_threshold:.0f}, "
+                    f"y0={img_rect.y0:.0f}>={bottom_threshold:.0f})"
                 )
 
                 if is_in_corner:
@@ -116,9 +126,11 @@ class WatermarkRemover:
                         target_images.append((xref, img_rect, url))
                         images_to_remove.add(xref)
 
-        # If we found images with target links in corner - remove ALL images in that corner
+        # If we found images with target links in corner, remove all corner images.
         if target_images:
-            logger.info(f"    Found {len(target_images)} images with target links in corner")
+            logger.info(
+                f"    Found {len(target_images)} images with target links in corner"
+            )
 
             # Collect all images in corner (even without links)
             for img in image_list:
@@ -132,7 +144,9 @@ class WatermarkRemover:
                     )
                     if is_in_corner:
                         images_to_remove.add(xref)
-                        logger.debug(f"      Added for removal image xref:{xref} (in corner)")
+                        logger.debug(
+                            f"      Added for removal image xref:{xref} (in corner)"
+                        )
 
             logger.info(f"    Total to remove: {len(images_to_remove)} images")
 
@@ -149,7 +163,8 @@ class WatermarkRemover:
                     page.delete_image(xref)
                     removed_count += 1
                     logger.info(
-                        f"    ✓ Removed image ({img_type}) xref:{xref}: {', '.join(sizes)}"
+                        f"    ✓ Removed image ({img_type}) xref:{xref}: "
+                        f"{', '.join(sizes)}"
                     )
                 except Exception as e:
                     logger.error(f"    ✗ Error removing image xref:{xref}: {e}")

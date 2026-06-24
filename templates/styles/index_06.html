@@ -1,0 +1,220 @@
+            background: var(--error);
+            border-color: var(--error);
+            box-shadow: 0 4px 12px var(--error-bg);
+            transform: translateY(-1px);
+        }
+
+        /* ============================
+           Footer
+           ============================ */
+        .footer {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            margin-top: 28px;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+
+        .footer a {
+            color: var(--accent-light);
+            text-decoration: none;
+            transition: color var(--transition-fast);
+        }
+
+        .footer a:hover { color: var(--accent); text-decoration: underline; }
+
+        /* ============================
+           Touch & Active Interactions
+           ============================ */
+        button,
+        a.btn-download,
+        a.btn-download-all,
+        .result-card__btn-download,
+        .btn-add-more,
+        .drop-zone,
+        .history-toggle,
+        .theme-toggle {
+            touch-action: manipulation;
+        }
+
+        button:active,
+        .btn-submit:active,
+        .btn-download:active,
+        .btn-download-all:active,
+        .result-card__btn-download:active,
+        .btn-add-more:active,
+        .history-item__btn:active,
+        .file-clear:active {
+            transform: scale(0.96);
+        }
+
+        /* ============================
+           File Queue Styles
+           ============================ */
+        .drop-zone.has-file .drop-zone__input {
+            pointer-events: none;
+        }
+
+        .drop-zone__file-info {
+            display: none;
+            flex-direction: column;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .drop-zone.has-file .drop-zone__file-info {
+            display: flex;
+        }
+
+        /* Queue header row (count badge + Clear All) */
+        .queue-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 5px 10px;
+            margin-bottom: 5px;
+            background: var(--bg-input);
+            border: 1px solid var(--divider);
+            border-radius: var(--radius-xs);
+        }
+
+        .queue-count-badge {
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: var(--accent-light);
+            background: var(--accent-glow);
+            border: 1px solid var(--bg-card-border);
+            padding: 1px 8px;
+            border-radius: 10px;
+            letter-spacing: 0.2px;
+        }
+
+        .btn-clear-queue {
+            background: var(--error-bg);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: var(--error);
+            font-family: var(--font);
+            font-size: 0.7rem;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 4px 10px;
+            border-radius: var(--radius-xs);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: all var(--transition-fast);
+        }
+
+        .btn-clear-queue:hover {
+            background: var(--error);
+            color: #ffffff;
+            border-color: var(--error);
+            transform: translateY(-0.5px);
+        }
+
+        .btn-clear-queue svg {
+            width: 11px;
+            height: 11px;
+        }
+
+        /* Constrain queue list so many files don't blow out the drop zone */
+        #queueList {
+            max-height: 320px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding-right: 3px;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(124, 58, 237, 0.35) transparent;
+        }
+
+        #queueList::-webkit-scrollbar {
+            width: 3px;
+        }
+
+        #queueList::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        #queueList::-webkit-scrollbar-thumb {
+            background: rgba(124, 58, 237, 0.4);
+            border-radius: 4px;
+        }
+
+        .queue-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--divider);
+            padding: 6px 10px;
+            border-radius: var(--radius-xs);
+            transition: all var(--transition);
+            position: relative;
+        }
+
+        [data-theme="light"] .queue-item {
+            background: rgba(0, 0, 0, 0.02);
+        }
+
+        .queue-item:hover {
+            border-color: rgba(124, 58, 237, 0.25);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        [data-theme="light"] .queue-item:hover {
+            background: rgba(0, 0, 0, 0.04);
+        }
+
+        /* Queue actions row — compact inline buttons */
+        .queue-actions {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 5px;
+            z-index: 3;
+            position: relative;
+        }
+
+        .btn-add-more {
+            background: none;
+            border: 1px dashed var(--accent);
+            color: var(--accent-light);
+            cursor: pointer;
+            padding: 5px 12px;
+            border-radius: var(--radius-xs);
+            font-size: 0.78rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all var(--transition);
+        }
+
+        .btn-add-more:hover {
+            background: var(--accent-glow);
+            color: var(--accent);
+            border-style: solid;
+        }
+
+        /* ============================
+           Result Cards & ZIP download
+           ============================ */
+        .result-cards-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 20px;
+            width: 100%;
+        }
+
+        .result-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;

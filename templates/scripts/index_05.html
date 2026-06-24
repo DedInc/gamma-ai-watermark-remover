@@ -1,0 +1,55 @@
+                    <div class="history-item__icon ${escapeHtml(iconBg)}" data-ext="${escapeHtml(extLabel)}">${fileIconSvg}</div>
+                    <div class="history-item__body">
+                        <div class="history-item__name" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</div>
+                        <div class="history-item__meta">
+                            <span class="history-item__time">${SVGS.clock}${escapeHtml(item.time)}</span>
+                            <span class="history-item__status ${escapeHtml(item.status)}">${statusIconSvg}${escapeHtml(statusLabel)}</span>
+                        </div>
+                    </div>
+                    <div class="history-item__actions">
+                        ${item.downloadUrl ? `<a href="${escapeHtml(item.downloadUrl)}" class="history-item__btn" title="Re-download">${SVGS.download}</a>` : ''}
+                        <button class="history-item__btn delete" title="Remove from history" data-delete="${item.id}">${SVGS.clear}</button>
+                    </div>
+                </li>`;
+            }).join('');
+
+            histList.querySelectorAll('[data-delete]').forEach(btn => {
+                btn.addEventListener('click', () => deleteHistoryItem(Number(btn.dataset.delete)));
+            });
+        }
+
+        histToggle.addEventListener('click', () => {
+            const isOpen = histList.classList.toggle('open');
+            histToggle.classList.toggle('open', isOpen);
+            histToggle.setAttribute('aria-expanded', isOpen);
+            if (!isOpen) histList.dataset.userClosed = 'true';
+            else delete histList.dataset.userClosed;
+        });
+
+        historyClear.addEventListener('click', clearHistory);
+
+        renderHistory();
+
+        /* ── Keyboard Shortcuts ───────────────────────── */
+        document.addEventListener('keydown', (e) => {
+            const isMod = e.metaKey || e.ctrlKey;
+            if (!isMod) return;
+
+            // Mod + U → open file picker
+            if (e.key === 'u' || e.key === 'U') {
+                e.preventDefault();
+                fileInput.click();
+            }
+            // Mod + Enter → submit
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (!submitBtn.disabled) submitBtn.click();
+            }
+            // Mod + D → download
+            if (e.key === 'd' || e.key === 'D') {
+                const dlBtn = document.getElementById('downloadBtn');
+                if (dlBtn) { e.preventDefault(); dlBtn.click(); }
+            }
+        });
+
+    })();

@@ -1,11 +1,11 @@
 """XML structure analysis for PPTX files."""
 
 import os
-import zipfile
 import xml.etree.ElementTree as ET
+import zipfile
 
 
-def extract_and_analyze_xml(pptx_path):
+def extract_and_analyze_xml(pptx_path: str) -> list[str]:
     """Extract PPTX as ZIP and analyze XML structure."""
     result = []
     result.append("\n" + "=" * 80)
@@ -42,7 +42,7 @@ def extract_and_analyze_xml(pptx_path):
     return result
 
 
-def _search_gamma_in_xml(extract_dir):
+def _search_gamma_in_xml(extract_dir: str) -> list[str]:
     """Search for 'gamma' in XML files."""
     result = []
     result.append("\n" + "-" * 40)
@@ -54,7 +54,7 @@ def _search_gamma_in_xml(extract_dir):
             if file.endswith(".xml") or file.endswith(".rels"):
                 filepath = os.path.join(root, file)
                 try:
-                    with open(filepath, "r", encoding="utf-8") as f:
+                    with open(filepath, encoding="utf-8") as f:
                         content = f.read()
                         if "gamma" in content.lower():
                             result.append(f"\n*** FOUND 'gamma' in: {filepath} ***")
@@ -68,7 +68,7 @@ def _search_gamma_in_xml(extract_dir):
     return result
 
 
-def _analyze_slide_xml(extract_dir):
+def _analyze_slide_xml(extract_dir: str) -> list[str]:
     """Analyze slide XML files for shape details."""
     result = []
     result.append("\n" + "-" * 40)
@@ -99,7 +99,7 @@ def _analyze_slide_xml(extract_dir):
     return result
 
 
-def _analyze_relationships(extract_dir):
+def _analyze_relationships(extract_dir: str) -> list[str]:
     """Analyze relationships files for hyperlinks."""
     result = []
     result.append("\n" + "-" * 40)

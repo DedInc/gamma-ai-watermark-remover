@@ -1,0 +1,220 @@
+                            thumbEl.innerHTML = `<img src="${url}" alt="File preview" style="width:100%; height:100%; object-fit:cover; display:block;" />`;
+                        }
+                    }
+                });
+            });
+        }
+
+        fileInput.addEventListener('change', async () => {
+            if (!fileInput.files.length) return;
+            const files = Array.from(fileInput.files);
+            // If ALL selected files are PNGs (and there are multiple), auto-bundle into ZIP
+            const allPng = files.every(f => getExt(f.name) === 'png');
+            if (allPng && files.length > 1) {
+                await bundlePngFilesToZip(files);
+            } else {
+                addFilesToQueue(files);
+            }
+            fileInput.value = '';
+        });
+
+        if (folderInput) {
+            folderInput.addEventListener('change', async () => {
+                if (folderInput.files.length) {
+                    let folderName = 'slides';
+                    const firstFile = folderInput.files[0];
+                    if (firstFile.webkitRelativePath) {
+                        folderName = firstFile.webkitRelativePath.split('/')[0];
+                    }
+                    await bundleFolderToZip(folderName, Array.from(folderInput.files));
+                    folderInput.value = '';
+                }
+            });
+        }
+
+        // Clear All queue button
+        const clearQueueBtn = document.getElementById('clearQueueBtn');
+        if (clearQueueBtn) {
+            clearQueueBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                clearFileQueue();
+                notifArea.innerHTML = '';
+            });
+        }
+
+        const addMoreFilesBtn = document.getElementById('addMoreFilesBtn');
+        if (addMoreFilesBtn) {
+            addMoreFilesBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                fileInput.click();
+            });
+        }
+
+        if (addFolderBtn) {
+            addFolderBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                folderInput.click();
+            });
+        }
+
+        // Keyboard/Focus Handling
+        const preventFilePickerOnModEnter = (e) => {
+            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (!submitBtn.disabled) submitBtn.click();
+            }
+        };
+
+        fileInput.addEventListener('keydown', preventFilePickerOnModEnter);
+
+        dropZone.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (!submitBtn.disabled) submitBtn.click();
+            } else if ((e.key === 'Enter' || e.key === ' ') && !e.metaKey && !e.ctrlKey) {
+                e.preventDefault();
+                fileInput.click();
+            }
+        });
+
+        /* ── Drag & Drop ──────────────────────────────── */
+        ['dragenter', 'dragover'].forEach(ev => {
+            dropZone.addEventListener(ev, (e) => {
+                e.preventDefault();
+                dropZone.classList.add('drag-over');
+            });
+        });
+
+        ['dragleave', 'drop'].forEach(ev => {
+            dropZone.addEventListener(ev, async (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('drag-over');
+                if (ev === 'drop') {
+                    const items = e.dataTransfer.items;
+                    if (items && items.length > 0) {
+                        const filesList = [];
+                        let hasDir = false;
+                        for (let i = 0; i < items.length; i++) {
+                            const entry = items[i].webkitGetAsEntry ? items[i].webkitGetAsEntry() : null;
+                            if (entry) {
+                                if (entry.isDirectory) {
+                                    hasDir = true;
+                                    await bundleFolderToZip(entry.name, await getFilesFromEntry(entry));
+                                } else {
+                                    const file = items[i].getAsFile();
+                                    if (file) filesList.push(file);
+                                }
+                            } else {
+                                const file = items[i].getAsFile();
+                                if (file) filesList.push(file);
+                            }
+                        }
+                        if (filesList.length > 0) {
+                            // If all non-directory files are PNGs and there are 2+, auto-bundle
+                            const allPng = filesList.every(f => getExt(f.name) === 'png');
+                            if (allPng && filesList.length > 1) {
+                                await bundlePngFilesToZip(filesList);
+                            } else {
+                                addFilesToQueue(filesList);
+                            }
+                        }
+                    } else if (e.dataTransfer.files.length) {
+                        const files = Array.from(e.dataTransfer.files);
+                        const allPng = files.every(f => getExt(f.name) === 'png');
+                        if (allPng && files.length > 1) {
+                            await bundlePngFilesToZip(files);
+                        } else {
+                            addFilesToQueue(files);
+                        }
+                    }
+                }
+            });
+        });
+
+        /* ── Form Submission (Sequential Processing) ── */
+        let startTime = 0;
+        let elapsedTimer = null;
+
+        function showToast(message, type = 'error') {
+            const iconSvg = type === 'error' ? SVGS.error 
+                          : type === 'success' ? SVGS.success 
+                          : SVGS.info;
+            const safeType = escapeHtml(type);
+            notifArea.innerHTML = `
+                <div class="notification ${safeType}">
+                    ${iconSvg}
+                    <span>${escapeHtml(message)}</span>
+                </div>`;
+            notifArea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function uploadAndProcessSingleFile(file, onProgress) {
+            return new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', '/api/remove_watermarks');
+
+                xhr.upload.onprogress = function (ev) {
+                    if (ev.lengthComputable) {
+                        const pct = Math.round((ev.loaded / ev.total) * 100);
+                        onProgress(pct);
+                    }
+                };
+
+                xhr.upload.onload = function () {
+                    onProgress(100);
+                    overlayText.textContent = `Processing…`;
+                    let subtext = `Removing branding from ${file.name}…`;
+                    if (getExt(file.name) === 'key') {
+                        subtext += ` (converting via Keynote app, please wait)`;
+                    }
+                    document.getElementById('overlaySubtext').textContent = subtext;
+                };
+
+                xhr.onload = function () {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        try {
+                            const res = JSON.parse(xhr.responseText);
+                            if (res.results && res.results.length > 0) {
+                                resolve(res.results[0]);
+                            } else {
+                                reject(new Error('Invalid response format.'));
+                            }
+                        } catch (e) {
+                            reject(new Error('Failed to parse response.'));
+                        }
+                    } else {
+                        reject(new Error(`Server error: ${xhr.status}`));
+                    }
+                };
+
+                xhr.onerror = function () {
+                    reject(new Error('Network error.'));
+                };
+
+                const fd = new FormData();
+                fd.append('files', file);
+                xhr.send(fd);
+            });
+        }
+
+        function renderBatchResults(results) {
+            if (results.length === 0) return;
+
+            const successesWithDownloads = results.filter(r => r.success && r.download_filename);
+            const downloadFilenames = successesWithDownloads.map(r => r.download_filename);
+
+            let zipBtnHtml = '';
+            if (downloadFilenames.length >= 2) {
+                const zipQuery = encodeURIComponent(downloadFilenames.join(','));
+                zipBtnHtml = `
+                    <a href="/download_zip?files=${zipQuery}" class="btn-download-all" id="downloadZipBtn">
+                        ${SVGS.download}
+                        Download All as ZIP (${downloadFilenames.length} files)
+                    </a>`;
+            }
+
+            const cardsHtml = results.map(r => {
+                const statusClass = r.success ? (r.has_watermark ? 'success' : 'clean') : 'error';
+                const statusLabel = r.success ? (r.has_watermark ? 'Cleaned' : 'No watermark') : 'Failed';

@@ -1,19 +1,18 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """PPTX Watermark Analysis Script"""
 
-import sys
 import io
-
-from pptx import Presentation
+import sys
+from typing import Any, cast
 
 from analysis.slide_analyzer import (
-    analyze_slides,
     analyze_slide_master,
+    analyze_slides,
     print_slide_dimensions,
 )
-from analysis.xml_analyzer import extract_and_analyze_xml
 from analysis.utils import get_shape_position_percentage
+from analysis.xml_analyzer import extract_and_analyze_xml
+from pptx import Presentation
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
@@ -21,8 +20,11 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="repla
 PPTX_FILE = r"Sample\Your-Tenant-Just-Sent-You-This-Photo.pptx"
 
 
-def print_watermark_summary(gamma_shapes, prs):
+def print_watermark_summary(
+    gamma_shapes: list[tuple[str, Any, str]], prs: object
+) -> None:
     """Print summary of detected watermarks."""
+    prs = cast(Any, prs)
     print("\n" + "=" * 80)
     print("WATERMARK DETECTION SUMMARY")
     print("=" * 80)
@@ -34,7 +36,7 @@ def print_watermark_summary(gamma_shapes, prs):
             if shape.left is not None:
                 left_pct, top_pct, right_pct, bottom_pct = (
                     get_shape_position_percentage(
-                        shape, prs.slide_width, prs.slide_height
+                        shape, int(prs.slide_width or 0), int(prs.slide_height or 0)
                     )
                 )
                 print(
@@ -46,7 +48,7 @@ def print_watermark_summary(gamma_shapes, prs):
         print("Watermark may be in slide masters, layouts, or embedded differently.")
 
 
-def main():
+def main() -> None:
     print("=" * 80)
     print("GAMMA PPTX WATERMARK ANALYSIS")
     print("=" * 80)
@@ -67,7 +69,9 @@ def main():
     print("=" * 80)
 
     for master in prs.slide_masters:
-        lines = analyze_slide_master(master, prs.slide_width, prs.slide_height)
+        lines = analyze_slide_master(
+            master, int(prs.slide_width or 0), int(prs.slide_height or 0)
+        )
         for line in lines:
             print(line)
 

@@ -1,13 +1,17 @@
 """
 PPTX Watermark Detector for Gamma.app watermarks.
 
-This module provides functionality to detect Gamma watermarks in PowerPoint (PPTX) files.
-The watermarks are typically embedded in slide layouts as PNG images with hyperlinks to gamma.app.
+This module provides functionality to detect Gamma watermarks in PowerPoint
+(PPTX) files. The watermarks are typically embedded in slide layouts as PNG
+images with hyperlinks to gamma.app.
 """
+
+import logging
+from collections.abc import Iterable
+from typing import Any
 
 from pptx import Presentation
 from pptx.enum.shapes import MSO_SHAPE_TYPE
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -15,18 +19,21 @@ logger = logging.getLogger(__name__)
 class PPTXWatermarkDetector:
     """Detects Gamma watermarks in PPTX files."""
 
-    def __init__(self, target_domain="gamma.app", corner_threshold=0.70):
+    def __init__(
+        self, target_domain: str = "gamma.app", corner_threshold: float = 0.70
+    ) -> None:
         """
         Initialize the detector.
 
         Args:
             target_domain: The domain to look for in hyperlinks (default: "gamma.app")
-            corner_threshold: The position threshold for bottom-right corner detection (default: 0.70)
+            corner_threshold: Position threshold for bottom-right corner
+                detection (default: 0.70)
         """
         self.target_domain = target_domain.lower()
         self.corner_threshold = corner_threshold
 
-    def detect_watermarks(self, pptx_path):
+    def detect_watermarks(self, pptx_path: str) -> list[dict[str, object]]:
         """
         Detect watermarks in a PPTX file.
 
@@ -48,8 +55,8 @@ class PPTXWatermarkDetector:
 
         try:
             prs = Presentation(pptx_path)
-            slide_width = prs.slide_width
-            slide_height = prs.slide_height
+            slide_width = int(prs.slide_width or 0)
+            slide_height = int(prs.slide_height or 0)
 
             logger.info(f"Analyzing PPTX file: {pptx_path}")
             logger.info(f"Slide dimensions: {slide_width} x {slide_height} EMUs")
@@ -98,7 +105,8 @@ class PPTXWatermarkDetector:
                 for r in results:
                     if r["is_watermark"]:
                         logger.info(
-                            f"  ✓ {r['location_name']}: {r['shape_name']} ({r['hyperlink']})"
+                            f"  ✓ {r['location_name']}: {r['shape_name']} "
+                            f"({r['hyperlink']})"
                         )
             else:
                 logger.info(f"\nNo {self.target_domain} watermarks detected.")
@@ -110,8 +118,13 @@ class PPTXWatermarkDetector:
             raise
 
     def _check_shapes(
-        self, shapes, slide_width, slide_height, location_type, location_name
-    ):
+        self,
+        shapes: Iterable[Any],
+        slide_width: int,
+        slide_height: int,
+        location_type: str,
+        location_name: str,
+    ) -> list[dict[str, object]]:
         """
         Check shapes for potential watermarks.
 
@@ -185,11 +198,14 @@ class PPTXWatermarkDetector:
 
             if is_watermark:
                 logger.info(
-                    f"    ✓ Found watermark: {shape.name} at ({left_pct * 100:.1f}%, {top_pct * 100:.1f}%) -> {hyperlink_url}"
+                    f"    ✓ Found watermark: {shape.name} at "
+                    f"({left_pct * 100:.1f}%, {top_pct * 100:.1f}%) "
+                    f"-> {hyperlink_url}"
                 )
             else:
                 logger.debug(
-                    f"    Corner image without gamma link: {shape.name} at ({left_pct * 100:.1f}%, {top_pct * 100:.1f}%)"
+                    f"    Corner image without gamma link: {shape.name} at "
+                    f"({left_pct * 100:.1f}%, {top_pct * 100:.1f}%)"
                 )
 
             results.append(result)

@@ -1,11 +1,15 @@
 """Shape analysis for PPTX watermark detection."""
 
+from typing import Any, cast
+
 from pptx.enum.shapes import MSO_SHAPE_TYPE
+
 from .utils import emu_to_inches, get_shape_position_percentage, is_bottom_right_corner
 
 
-def analyze_hyperlinks(shape):
+def analyze_hyperlinks(shape: object) -> list[str]:
     """Extract hyperlinks from a shape."""
+    shape = cast(Any, shape)
     hyperlinks = []
 
     # Check if the shape itself has a click action (hyperlink)
@@ -30,8 +34,11 @@ def analyze_hyperlinks(shape):
     return hyperlinks
 
 
-def analyze_shape(shape, slide_width, slide_height, indent=0):
+def analyze_shape(
+    shape: object, slide_width: int, slide_height: int, indent: int = 0
+) -> list[str]:
     """Analyze a single shape and return details."""
+    shape = cast(Any, shape)
     prefix = "  " * indent
     result = []
 
@@ -51,7 +58,8 @@ def analyze_shape(shape, slide_width, slide_height, indent=0):
     result.append(f"{prefix}Shape: {shape.name}")
     result.append(f"{prefix}  Type: {shape_type}")
     result.append(
-        f"{prefix}  Position (EMUs): left={left}, top={top}, width={width}, height={height}"
+        f"{prefix}  Position (EMUs): left={left}, top={top}, "
+        f"width={width}, height={height}"
     )
     result.append(
         f'{prefix}  Position (inches): left={emu_to_inches(left):.2f}", '

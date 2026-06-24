@@ -1,0 +1,220 @@
+
+        .btn-submit:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 28px rgba(139, 92, 246, 0.4);
+        }
+
+        .btn-submit:active:not(:disabled) { transform: translateY(0); }
+        .btn-submit:disabled { opacity: 0.45; cursor: not-allowed; }
+
+        .btn-submit:focus-visible {
+            outline: 2px solid var(--accent-light);
+            outline-offset: 2px;
+        }
+
+        .btn-shortcut {
+            font-size: 0.7rem;
+            background: rgba(255, 255, 255, 0.15);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+            opacity: 0.8;
+            margin-left: auto;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            font-family: var(--font);
+        }
+
+        .hint-shortcut {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            margin-left: 4px;
+            font-weight: 600;
+        }
+
+        /* ============================
+           Processing Overlay
+           ============================ */
+        .overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(10, 10, 15, 0.85);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border-radius: var(--radius);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            z-index: 50;
+            padding: 40px;
+        }
+
+        .overlay.show { display: flex; }
+
+        .overlay__spinner {
+            width: 48px;
+            height: 48px;
+            border: 3px solid var(--divider);
+            border-top-color: var(--accent-light);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .overlay__text {
+            font-size: 1rem;
+            font-weight: 500;
+            color: #fff;
+        }
+
+        .overlay__progress-wrap {
+            width: 80%;
+            max-width: 300px;
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 10px;
+            padding: 3px;
+            overflow: hidden;
+        }
+
+        .overlay__progress-bar {
+            height: 8px;
+            border-radius: 8px;
+            background: linear-gradient(90deg, var(--accent), var(--accent-light));
+            width: 0%;
+            transition: width 0.3s linear;
+            position: relative;
+        }
+
+        .overlay__progress-bar::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+            animation: shimmer 1.5s infinite;
+        }
+
+        @keyframes shimmer {
+            0%   { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .overlay__elapsed {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* ============================
+           Notifications / Results
+           ============================ */
+        .notification-area {
+            margin-top: 24px;
+            text-align: center;
+        }
+
+        .notification {
+            padding: 18px 20px;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            animation: notifSlideIn 0.4s ease;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            text-align: left;
+        }
+
+        @keyframes notifSlideIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .notification svg {
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .notification.success {
+            background: var(--success-bg);
+            color: var(--success);
+            border: 1px solid rgba(34, 197, 94, 0.15);
+        }
+
+        .notification.error {
+            background: var(--error-bg);
+            color: var(--error);
+            border: 1px solid rgba(239, 68, 68, 0.15);
+        }
+
+        .notification.info {
+            background: var(--info-bg);
+            color: var(--info);
+            border: 1px solid rgba(59, 130, 246, 0.15);
+        }
+
+        .btn-download {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 16px;
+            padding: 14px 24px;
+            border-radius: var(--radius-sm);
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+            color: #fff;
+            text-decoration: none;
+            font-family: var(--font);
+            font-size: 0.95rem;
+            font-weight: 700;
+            transition: all var(--transition);
+            box-shadow: 0 4px 16px rgba(139, 92, 246, 0.35);
+            text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            letter-spacing: 0.3px;
+            width: 100%;
+            justify-content: center;
+        }
+
+        .btn-download:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 28px rgba(139, 92, 246, 0.45);
+        }
+
+        .btn-download:focus-visible {
+            outline: 2px solid var(--accent-light);
+            outline-offset: 2px;
+        }
+
+        /* ============================
+           History Panel (Card-based Dashboard)
+           ============================ */
+        .history-section {
+            margin-top: 32px;
+            border-top: 1px solid var(--divider);
+            padding-top: 24px;
+        }
+
+        .history-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .history-toggle {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-family: var(--font);
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: color var(--transition-fast);
+            padding: 0;
+        }
+
+        .history-toggle:hover { color: var(--text-primary); }
+

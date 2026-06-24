@@ -1,0 +1,220 @@
+    (function () {
+        'use strict';
+
+        /* ── Platform Detection ───────────────────────── */
+        const isMac = /Mac|iPhone|iPad|iPod/.test(navigator.userAgentData?.platform || navigator.platform || '');
+        const modSymbol = isMac ? '⌘' : 'Ctrl';
+
+        /* ── DOM refs ─────────────────────────────────── */
+        const html         = document.documentElement;
+        const form         = document.getElementById('uploadForm');
+        const fileInput    = document.getElementById('fileInput');
+        const dropZone     = document.getElementById('dropZone');
+        const submitBtn    = document.getElementById('submitBtn');
+        const fileClear    = document.getElementById('fileClear');
+        const fileName     = document.getElementById('fileName');
+        const fileSize     = document.getElementById('fileSize');
+        const fileThumb    = document.getElementById('fileThumb');
+        const fileFallback = document.getElementById('fileFallback');
+        const fileFallbackLabel = document.getElementById('fileFallbackLabel');
+        const sizeWarning  = document.getElementById('sizeWarning');
+        const sizeWarnText = document.getElementById('sizeWarningText');
+        const overlay      = document.getElementById('overlay');
+        const overlayText  = document.getElementById('overlayText');
+        const progressBar  = document.getElementById('progressBar');
+        const overlayElap  = document.getElementById('overlayElapsed');
+        const notifArea    = document.getElementById('notificationArea');
+        const histSection  = document.getElementById('historySection');
+        const histToggle   = document.getElementById('historyToggle');
+        const histList     = document.getElementById('historyList');
+        const histCount    = document.getElementById('historyCount');
+        const historyClear = document.getElementById('historyClear');
+        const themeToggle  = document.getElementById('themeToggle');
+        const folderInput  = document.getElementById('folderInput');
+        const addFolderBtn = document.getElementById('addFolderBtn');
+
+        let selectedFiles = [];
+        let pendingPngFiles = []; // accumulates all individual PNGs for incremental bundling
+
+        const SIZE_WARN   = 100 * 1024 * 1024;  // 100 MB
+        const SIZE_DANGER  = 500 * 1024 * 1024;  // 500 MB
+
+        /* ── SVG Icons ────────────────────────────────── */
+        const SVGS = {
+            pdf: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4M9 15h6M9 11h6M9 19h6"/></svg>`,
+            pptx: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4M10 9H8v8h2M16 9h-2v8h2M13 13h-3"/></svg>`,
+            key: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/></svg>`,
+            zip: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg>`,
+            png: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>`,
+            clear: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>`,
+            success: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>`,
+            info: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>`,
+            error: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></svg>`,
+            download: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>`,
+            clock: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>`
+        };
+
+        /* ── Keyboard Hints initialization ────────────── */
+        const btnShortcutSubmit = document.getElementById('btnShortcutSubmit');
+        const hintShortcutUpload = document.getElementById('hintShortcutUpload');
+        if (btnShortcutSubmit) btnShortcutSubmit.textContent = modSymbol + ' + ↵';
+        if (hintShortcutUpload) hintShortcutUpload.textContent = `(${modSymbol} + U)`;
+
+        const initialDlShortcut = document.getElementById('btnShortcutDownload');
+        if (initialDlShortcut) initialDlShortcut.textContent = modSymbol + ' + D';
+
+        /* ── Utilities ────────────────────────────────── */
+        function formatBytes(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+            return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+        }
+
+        function getExt(name) {
+            return (name || '').split('.').pop().toLowerCase();
+        }
+
+        /** Escape a string for safe interpolation into innerHTML. */
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function formatTime(sec) {
+            const m = Math.floor(sec / 60);
+            const s = sec % 60;
+            return m > 0 ? `${m}m ${s}s` : `${s}s`;
+        }
+
+        /* ── Particles ────────────────────────────────── */
+        function createParticles(count) {
+            const container = document.querySelector('.bg-gradient');
+            for (let i = 0; i < count; i++) {
+                const p = document.createElement('div');
+                p.className = 'particle';
+                const size = Math.random() * 3 + 1.5;
+                const duration = Math.random() * 12 + 8;
+                const delay = Math.random() * duration;
+                const left = Math.random() * 100;
+                Object.assign(p.style, {
+                    width: size + 'px',
+                    height: size + 'px',
+                    left: left + '%',
+                    animation: `particleFloat ${duration}s ${delay}s infinite linear`
+                });
+                container.appendChild(p);
+            }
+        }
+        createParticles(25);
+
+        /* ── Theme Toggle ─────────────────────────────── */
+        function setTheme(theme) {
+            html.setAttribute('data-theme', theme);
+            localStorage.setItem('gamma-theme', theme);
+        }
+
+        const savedTheme = localStorage.getItem('gamma-theme') || 'dark';
+        setTheme(savedTheme);
+
+        themeToggle.addEventListener('click', () => {
+            setTheme(html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+        });
+
+        /* ── Thumbnail Generation ─────────────────────── */
+        async function generateThumbnail(file) {
+            const ext = getExt(file.name);
+            try {
+                if (ext === 'pdf') {
+                    return await generatePDFThumbnail(file);
+                } else if (ext === 'pptx') {
+                    return await generatePPTXThumbnail(file);
+                } else if (ext === 'key') {
+                    return await generateKeynoteThumbnail(file);
+                } else if (ext === 'png') {
+                    return URL.createObjectURL(file);
+                }
+            } catch (err) {
+                console.debug('Thumbnail generation failed:', err);
+            }
+            return null;
+        }
+
+        async function generatePDFThumbnail(file) {
+            if (typeof pdfjsLib === 'undefined') return null;
+            pdfjsLib.GlobalWorkerOptions.workerSrc =
+                'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            const page = await pdf.getPage(1);
+            const viewport = page.getViewport({ scale: 0.25 });
+            const canvas = document.createElement('canvas');
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            const ctx = canvas.getContext('2d');
+            await page.render({ canvasContext: ctx, viewport }).promise;
+            return canvas.toDataURL('image/jpeg', 0.75);
+        }
+
+        async function generatePPTXThumbnail(file) {
+            if (typeof JSZip === 'undefined') return null;
+            const zip = await JSZip.loadAsync(file);
+            // PPTX files store a thumbnail at docProps/thumbnail.jpeg
+            const thumb = zip.file('docProps/thumbnail.jpeg') || zip.file('docProps/thumbnail.png');
+            if (thumb) {
+                const blob = await thumb.async('blob');
+                return URL.createObjectURL(blob);
+            }
+            return null;
+        }
+
+        async function generateKeynoteThumbnail(file) {
+            if (typeof JSZip === 'undefined') return null;
+            const zip = await JSZip.loadAsync(file);
+            // Keynote files store a thumbnail inside QuickLook/Thumbnail.jpg or QuickLook/Thumbnail.png
+            const thumb = zip.file('QuickLook/Thumbnail.jpg') || zip.file('QuickLook/Thumbnail.png') || zip.file('QuickLook/Thumbnail.jpeg');
+            if (thumb) {
+                const blob = await thumb.async('blob');
+                return URL.createObjectURL(blob);
+            }
+            return null;
+        }
+
+        function showThumbnail(dataUrl) {
+            // Remove fallback, show actual thumbnail
+            const img = document.createElement('img');
+            img.src = dataUrl;
+            img.alt = 'File preview';
+            fileThumb.innerHTML = '';
+            fileThumb.appendChild(img);
+        }
+
+        function resetThumbnail() {
+            fileThumb.innerHTML = '';
+            fileThumb.appendChild(fileFallback);
+        }
+
+        /* ── File Selection & Queue Handling ──────────── */
+        // Traverse HTML5 directory entries recursively
+        async function getFilesFromEntry(entry, path = '') {
+            const files = [];
+            const currentPath = path ? `${path}/${entry.name}` : entry.name;
+            if (entry.isFile) {
+                const file = await new Promise((resolve) => entry.file(resolve));
+                file.relativePath = path; // Attach relative path
+                files.push(file);
+            } else if (entry.isDirectory) {
+                const reader = entry.createReader();
+                const entries = await new Promise((resolve) => reader.readEntries(resolve));
+                for (const childEntry of entries) {
+                    const childFiles = await getFilesFromEntry(childEntry, currentPath);
+                    files.push(...childFiles);
+                }
+            }
+            return files;
+        }

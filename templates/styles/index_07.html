@@ -1,0 +1,220 @@
+            background: var(--bg-card-glow);
+            border: 1px solid var(--divider);
+            padding: 14px 18px;
+            border-radius: var(--radius-sm);
+            transition: all var(--transition);
+        }
+
+        .result-card:hover {
+            border-color: rgba(124, 58, 237, 0.25);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .result-card__info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+            flex: 1;
+        }
+
+        .result-card__icon {
+            width: 36px;
+            height: 36px;
+            border-radius: var(--radius-xs);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            color: #fff;
+        }
+
+        .result-card__icon.pdf {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+        }
+
+        .result-card__icon.pptx {
+            background: linear-gradient(135deg, #f97316, #ea580c);
+        }
+
+        .result-card__icon.key {
+            background: linear-gradient(135deg, #0ea5e9, #6366f1);
+        }
+
+        .result-card__icon.zip {
+            background: linear-gradient(135deg, #8b5cf6, #a855f7);
+        }
+
+        .result-card__icon.png {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+
+        .result-card__icon svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .result-card__details {
+            display: flex;
+            flex-direction: column;
+            text-align: left;
+            min-width: 0;
+        }
+
+        .result-card__name {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 100%;
+        }
+
+        .result-card__status {
+            font-size: 0.75rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 2px;
+        }
+
+        .result-card__status.success { color: var(--success); }
+        .result-card__status.clean { color: var(--accent-light); }
+        .result-card__status.error { color: var(--error); }
+
+        .result-card__status svg {
+            width: 14px;
+            height: 14px;
+            stroke-width: 2.25px;
+        }
+
+        .result-card__actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            z-index: 3;
+        }
+
+        .result-card__btn-download {
+            background: var(--accent);
+            color: #fff !important;
+            border: none;
+            padding: 8px 14px;
+            border-radius: var(--radius-xs);
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all var(--transition);
+            text-decoration: none;
+        }
+
+        .result-card__btn-download:hover {
+            background: var(--accent-light);
+            transform: translateY(-1px);
+        }
+
+        .btn-download-all {
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            color: #fff !important;
+            border: none;
+            width: 100%;
+            padding: 12px;
+            border-radius: var(--radius-sm);
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all var(--transition);
+            margin-bottom: 16px;
+            text-decoration: none;
+            box-shadow: 0 4px 12px var(--accent-glow);
+        }
+
+        .btn-download-all:hover {
+            opacity: 0.95;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(124, 58, 237, 0.4);
+        }
+
+        /* ============================
+           Responsive Media Query
+           ============================ */
+        @media (max-width: 640px) {
+            body { padding: 12px; }
+            .card { padding: 24px 16px 20px; }
+            .header h1 { font-size: 1.25rem; }
+            .header p { font-size: 0.85rem; }
+            .drop-zone { padding: 24px 16px; }
+            .drop-zone.has-file { padding: 12px; }
+            .file-meta__name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+            .theme-toggle { top: 8px; right: 8px; width: 36px; height: 36px; }
+
+            /* History Stacking */
+            .history-item {
+                display: grid;
+                grid-template-columns: 40px 1fr;
+                gap: 10px 12px;
+                padding: 12px;
+            }
+            .history-item__icon {
+                grid-column: 1;
+                grid-row: 1;
+            }
+            .history-item__body {
+                grid-column: 2;
+                grid-row: 1;
+                min-width: 0;
+            }
+            .history-item__actions {
+                grid-column: 1 / span 2;
+                grid-row: 2;
+                display: flex;
+                justify-content: flex-end;
+                border-top: 1px solid var(--divider);
+                padding-top: 8px;
+                gap: 8px;
+            }
+            .history-item__btn {
+                flex: 1;
+                max-width: 120px;
+                height: 44px; /* Touch target size */
+            }
+
+            /* Result card adjustments for mobile */
+            .result-card {
+                flex-direction: column;
+                align-items: stretch;
+                padding: 12px;
+                gap: 12px;
+            }
+            .result-card__actions {
+                justify-content: flex-end;
+                border-top: 1px solid var(--divider);
+                padding-top: 8px;
+            }
+            .result-card__btn-download {
+                width: 100%;
+                justify-content: center;
+                height: 44px; /* Touch target size */
+            }
+        }
+
+        /* ============================
+           Accessibility / Reduced Motion
+           ============================ */
+        @media (prefers-reduced-motion: reduce) {
+            .bg-gradient::before,
+            .bg-gradient::after,
+            .particle,
+            .btn-submit,
+            .theme-toggle,
+            .file-clear,
+            .history-item__btn,

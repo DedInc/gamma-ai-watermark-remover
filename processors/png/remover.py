@@ -14,15 +14,16 @@ Strategy:
 The algorithm is pure-PIL so there are no extra binary dependencies.
 """
 
-from PIL import Image
 import logging
 import os
+
+from PIL import Image
 
 logger = logging.getLogger(__name__)
 
 
 # Proportion of the slide that the watermark occupies (right/bottom edges)
-WATERMARK_WIDTH_FRACTION = 0.22   # right 22 % of width
+WATERMARK_WIDTH_FRACTION = 0.22  # right 22 % of width
 WATERMARK_HEIGHT_FRACTION = 0.10  # bottom 10 % of height
 
 # How wide a sample strip to use when reading background colour (pixels)
@@ -57,7 +58,7 @@ def remove_png_watermark(input_path: str, output_path: str) -> dict:
 
     try:
         # Ensure absolute paths to avoid working-directory issues
-        input_path  = os.path.abspath(input_path)
+        input_path = os.path.abspath(input_path)
         output_path = os.path.abspath(output_path)
 
         # Use context manager to ensure the file handle is released after loading
@@ -74,11 +75,11 @@ def remove_png_watermark(input_path: str, output_path: str) -> dict:
         wm_h = max(1, min(wm_h, height))
 
         region_left = width - wm_w
-        region_top  = height - wm_h
+        region_top = height - wm_h
 
         # Defensive: ensure region is within image bounds
         region_left = max(0, min(region_left, width - 1))
-        region_top  = max(0, min(region_top,  height - 1))
+        region_top = max(0, min(region_top, height - 1))
 
         logger.info(
             f"PNG '{os.path.basename(input_path)}': size={width}x{height}, "
@@ -88,10 +89,10 @@ def remove_png_watermark(input_path: str, output_path: str) -> dict:
         pixels = img.load()
 
         # --- For each row in the watermark region, sample to the left and fill ---
-        # Guard: only sample when there are pixels to the left of the watermark boundary.
-        # If region_left == 0, sampling from x=0 would be inside the watermark region itself.
+        # Only sample when pixels exist left of the watermark boundary.
+        # If region_left == 0, x=0 would be inside the watermark region itself.
         can_sample = region_left > 0
-        sample_x_end   = region_left - 1
+        sample_x_end = region_left - 1
         sample_x_start = max(0, region_left - SAMPLE_STRIP_WIDTH)
 
         rows_patched = 0
@@ -102,7 +103,9 @@ def remove_png_watermark(input_path: str, output_path: str) -> dict:
                 for x in range(sample_x_start, sample_x_end + 1):
                     sample_pixels.append(pixels[x, y])
 
-            fill_color = _median_color(sample_pixels) if sample_pixels else (255, 255, 255, 255)
+            fill_color = (
+                _median_color(sample_pixels) if sample_pixels else (255, 255, 255, 255)
+            )
 
             # Paint the entire watermark row with the sampled colour
             for x in range(region_left, width):
@@ -117,7 +120,9 @@ def remove_png_watermark(input_path: str, output_path: str) -> dict:
 
         img.save(output_path, "PNG")
 
-        logger.info(f"PNG watermark removed: {rows_patched} rows patched → {output_path}")
+        logger.info(
+            f"PNG watermark removed: {rows_patched} rows patched → {output_path}"
+        )
         result["success"] = True
         result["removed"] = True
         return result
@@ -127,4 +132,3 @@ def remove_png_watermark(input_path: str, output_path: str) -> dict:
         logger.error(err)
         result["error"] = err
         return result
-

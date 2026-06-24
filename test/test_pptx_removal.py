@@ -1,7 +1,8 @@
 """
 Test script for PPTX watermark detection and removal.
 
-This script tests the PPTX watermark detector and remover using the sample Gamma PPTX file.
+This script tests the PPTX watermark detector and remover using the sample
+Gamma PPTX file.
 """
 
 import os
@@ -14,7 +15,7 @@ from processors.pptx.detector import PPTXWatermarkDetector
 from processors.pptx.remover import PPTXWatermarkRemover
 
 
-def main():
+def main() -> int:
     # Paths
     sample_file = "Sample/Your-Tenant-Just-Sent-You-This-Photo.pptx"
     output_dir = "outputs"
@@ -82,7 +83,8 @@ def main():
     print(f"\nOriginal file watermarks: {original_watermark_count}")
     print(f"Cleaned file watermarks:  {cleaned_watermark_count}")
     print(
-        f"Watermarks removed:       {original_watermark_count - cleaned_watermark_count}"
+        "Watermarks removed:       "
+        f"{original_watermark_count - cleaned_watermark_count}"
     )
 
     if cleaned_watermark_count == 0 and original_watermark_count > 0:
@@ -91,7 +93,8 @@ def main():
         return 0
     elif cleaned_watermark_count < original_watermark_count:
         print(
-            f"\n[PARTIAL SUCCESS] Reduced watermarks from {original_watermark_count} to {cleaned_watermark_count}"
+            "\n[PARTIAL SUCCESS] Reduced watermarks from "
+            f"{original_watermark_count} to {cleaned_watermark_count}"
         )
         print(f"\nCleaned file saved to: {output_file}")
         return 0

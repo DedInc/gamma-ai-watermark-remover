@@ -1,0 +1,220 @@
+            z-index: 2;
+        }
+
+        .drop-zone__icon {
+            width: 44px;
+            height: 44px;
+            color: var(--text-muted);
+            margin: 0 auto 16px;
+            transition: all var(--transition);
+            display: block;
+        }
+
+        .drop-zone__prompt {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+            margin-bottom: 6px;
+        }
+
+        .drop-zone__hint {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .drop-zone.has-file .drop-zone__default { display: none; }
+
+        /* Drag-over overlay for populated queue */
+        .drop-zone__drag-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 10, 25, 0.92);
+            backdrop-filter: blur(6px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity var(--transition);
+            z-index: 10;
+            border-radius: var(--radius-sm);
+            border: 2px dashed var(--accent);
+        }
+
+        .drop-zone.drag-over.has-file .drop-zone__drag-overlay {
+            opacity: 1;
+        }
+
+        /* Thumbnail preview */
+        .file-thumb {
+            width: 36px;
+            height: 44px;
+            border-radius: 6px;
+            overflow: hidden;
+            flex-shrink: 0;
+            background: var(--bg-input);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--divider);
+            position: relative;
+        }
+
+        .file-thumb img,
+        .file-thumb canvas {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .file-thumb__fallback {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1px;
+            width: 100%;
+            height: 100%;
+            color: #fff;
+            font-size: 0.52rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .file-thumb__fallback svg {
+            width: 15px;
+            height: 15px;
+            stroke-width: 2.25px;
+            margin-bottom: 1px;
+        }
+
+        .file-thumb__fallback.pdf .icon-pptx { display: none; }
+        .file-thumb__fallback.pdf .icon-pdf { display: block; }
+        .file-thumb__fallback.pptx .icon-pdf { display: none; }
+        .file-thumb__fallback.pptx .icon-pptx { display: block; }
+        .file-thumb__fallback.pdf  { background: linear-gradient(135deg, #ef4444, #dc2626); }
+        .file-thumb__fallback.pptx { background: linear-gradient(135deg, #f97316, #ea580c); }
+        .file-thumb__fallback.key  { background: linear-gradient(135deg, #0ea5e9, #6366f1); }
+        .file-thumb__fallback.zip  { background: linear-gradient(135deg, #8b5cf6, #a855f7); }
+        .file-thumb__fallback.png  { background: linear-gradient(135deg, #10b981, #059669); }
+
+        .file-thumb .spinner-tiny {
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--divider);
+            border-top-color: var(--accent-light);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            position: absolute;
+        }
+
+        .file-meta {
+            text-align: left;
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .file-meta__name {
+            font-size: 0.83rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 100%;
+        }
+
+        .file-meta__size {
+            font-size: 0.73rem;
+            color: var(--text-muted);
+            margin-top: 1px;
+        }
+
+        .file-clear {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 50%;
+            transition: all var(--transition-fast);
+            position: relative;
+            z-index: 3;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .file-clear:hover { color: var(--error); background: var(--error-bg); }
+
+        /* File size warning */
+        .size-warning {
+            display: none;
+            margin-top: 12px;
+            padding: 10px 14px;
+            border-radius: var(--radius-xs);
+            font-size: 0.8rem;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .size-warning svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .size-warning.warn {
+            display: flex;
+            background: var(--warning-bg);
+            color: var(--warning);
+            border: 1px solid rgba(245, 158, 11, 0.15);
+        }
+
+        .size-warning.danger {
+            display: flex;
+            background: var(--error-bg);
+            color: var(--error);
+            border: 1px solid rgba(239, 68, 68, 0.15);
+        }
+
+        /* ============================
+           Submit Button & Shortcuts
+           ============================ */
+        .btn-submit {
+            width: 100%;
+            padding: 16px 24px;
+            border: none;
+            border-radius: var(--radius-sm);
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+            color: #fff;
+            font-family: var(--font);
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all var(--transition);
+            position: relative;
+            overflow: hidden;
+            letter-spacing: 0.4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+
+        .btn-submit::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, transparent, rgba(255,255,255,0.15), transparent);
+            opacity: 0;
+            transition: opacity var(--transition);
+        }
+
+        .btn-submit:hover:not(:disabled)::before { opacity: 1; }

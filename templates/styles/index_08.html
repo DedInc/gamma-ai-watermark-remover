@@ -1,0 +1,16 @@
+            .overlay__spinner,
+            .overlay__progress-bar::after {
+                animation: none !important;
+                transition: none !important;
+                transform: none !important;
+            }
+            .particle {
+                display: none !important;
+            }
+        }
+
+        /* ============================
+           Focus-visible global
+           ============================ */
+        :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+        :focus:not(:focus-visible) { outline: none; }

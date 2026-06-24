@@ -1,13 +1,18 @@
 """Utility functions for PPTX analysis."""
 
+from typing import Any, cast
 
-def emu_to_inches(emu):
+
+def emu_to_inches(emu: int) -> float:
     """Convert EMUs to inches."""
     return emu / 914400
 
 
-def get_shape_position_percentage(shape, slide_width, slide_height):
+def get_shape_position_percentage(
+    shape: object, slide_width: int, slide_height: int
+) -> tuple[float | None, float | None, float | None, float | None]:
     """Calculate shape position as percentage of slide dimensions."""
+    shape = cast(Any, shape)
     if shape.left is None or shape.top is None:
         return None, None, None, None
 
@@ -23,11 +28,13 @@ def get_shape_position_percentage(shape, slide_width, slide_height):
     return left_pct, top_pct, right_pct, bottom_pct
 
 
-def is_bottom_right_corner(shape, slide_width, slide_height, threshold=70):
+def is_bottom_right_corner(
+    shape: object, slide_width: int, slide_height: int, threshold: int = 70
+) -> bool:
     """Check if shape is in bottom-right corner (>threshold% of dimensions)."""
     left_pct, top_pct, right_pct, bottom_pct = get_shape_position_percentage(
         shape, slide_width, slide_height
     )
-    if left_pct is None:
+    if left_pct is None or top_pct is None:
         return False
     return left_pct >= threshold and top_pct >= threshold

@@ -1,14 +1,18 @@
 """
 PPTX Watermark Remover for Gamma.app watermarks.
 
-This module provides functionality to remove Gamma watermarks from PowerPoint (PPTX) files.
-The watermarks are typically embedded in slide layouts as PNG images with hyperlinks to gamma.app.
+This module provides functionality to remove Gamma watermarks from PowerPoint
+(PPTX) files. The watermarks are typically embedded in slide layouts as PNG
+images with hyperlinks to gamma.app.
 """
+
+import logging
+import os
+from collections.abc import Iterable
+from typing import Any
 
 from pptx import Presentation
 from pptx.enum.shapes import MSO_SHAPE_TYPE
-import logging
-import os
 
 logger = logging.getLogger(__name__)
 
@@ -16,18 +20,21 @@ logger = logging.getLogger(__name__)
 class PPTXWatermarkRemover:
     """Removes Gamma watermarks from PPTX files."""
 
-    def __init__(self, target_domain="gamma.app", corner_threshold=0.70):
+    def __init__(
+        self, target_domain: str = "gamma.app", corner_threshold: float = 0.70
+    ) -> None:
         """
         Initialize the remover.
 
         Args:
             target_domain: The domain to look for in hyperlinks (default: "gamma.app")
-            corner_threshold: The position threshold for bottom-right corner detection (default: 0.70)
+            corner_threshold: Position threshold for bottom-right corner
+                detection (default: 0.70)
         """
         self.target_domain = target_domain.lower()
         self.corner_threshold = corner_threshold
 
-    def remove_watermarks(self, input_path, output_path):
+    def remove_watermarks(self, input_path: str, output_path: str) -> dict[str, object]:
         """
         Remove watermarks from a PPTX file and save to a new file.
 
@@ -53,8 +60,8 @@ class PPTXWatermarkRemover:
 
         try:
             prs = Presentation(input_path)
-            slide_width = prs.slide_width
-            slide_height = prs.slide_height
+            slide_width = int(prs.slide_width or 0)
+            slide_height = int(prs.slide_height or 0)
 
             logger.info(f"Processing PPTX file: {input_path}")
             logger.info(f"Slide dimensions: {slide_width} x {slide_height} EMUs")
@@ -74,7 +81,6 @@ class PPTXWatermarkRemover:
                     shapes=master.shapes,
                     slide_width=slide_width,
                     slide_height=slide_height,
-                    location_name=f"SlideMaster{master_idx + 1}",
                 )
                 if master_removed > 0:
                     masters_cleaned += 1
@@ -91,7 +97,6 @@ class PPTXWatermarkRemover:
                         shapes=layout.shapes,
                         slide_width=slide_width,
                         slide_height=slide_height,
-                        location_name=layout_name,
                     )
 
                     if layout_removed > 0:
@@ -129,8 +134,11 @@ class PPTXWatermarkRemover:
             return result
 
     def _remove_watermarks_from_shapes(
-        self, shapes, slide_width, slide_height, location_name
-    ):
+        self,
+        shapes: Iterable[Any],
+        slide_width: int,
+        slide_height: int,
+    ) -> int:
         """
         Remove watermark shapes from a collection of shapes.
 
@@ -138,8 +146,6 @@ class PPTXWatermarkRemover:
             shapes: Collection of shapes to process
             slide_width: Width of the slide in EMUs
             slide_height: Height of the slide in EMUs
-            location_name: Name of the location for logging
-
         Returns:
             Number of watermarks removed
         """
@@ -191,7 +197,8 @@ class PPTXWatermarkRemover:
                     # Additional heuristic: check if it's in the extreme corner
                     if left_pct > 0.85 and top_pct > 0.90:
                         logger.info(
-                            f"    Found small corner image (potential watermark): {shape.name}"
+                            "    Found small corner image "
+                            f"(potential watermark): {shape.name}"
                         )
                         should_remove = True
 

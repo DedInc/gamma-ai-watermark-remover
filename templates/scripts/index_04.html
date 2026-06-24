@@ -1,0 +1,220 @@
+                const statusIconSvg = r.success ? (r.has_watermark ? SVGS.success : SVGS.info) : SVGS.error;
+                const file_type = getExt(r.filename);
+                const fileIconSvg = file_type === 'pdf'  ? SVGS.pdf
+                                  : file_type === 'pptx' ? SVGS.pptx
+                                  : file_type === 'key'  ? SVGS.key
+                                  : file_type === 'png'  ? SVGS.png
+                                  : SVGS.zip;
+
+                let statsHtml = '';
+                if (r.success && r.stats) {
+                    if (file_type === 'pdf') {
+                        statsHtml = `<span style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">Removed ${escapeHtml(r.stats.total_removed)} elements</span>`;
+                    } else if (file_type === 'pptx' || file_type === 'key') {
+                        statsHtml = `<span style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">Removed ${escapeHtml(r.stats.watermarks_removed)} watermarks</span>`;
+                    } else if (file_type === 'zip') {
+                        statsHtml = `<span style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">Cleaned ${escapeHtml(r.stats.png_cleaned)} of ${escapeHtml(r.stats.png_total)} PNG slides</span>`;
+                    } else if (file_type === 'png') {
+                        statsHtml = `<span style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">Cleaned PNG slide image</span>`;
+                    }
+                } else if (!r.success && r.error) {
+                    statsHtml = `<span style="font-size:0.7rem; color:var(--error); margin-top:2px; word-break:break-word;">${escapeHtml(r.error)}</span>`;
+                }
+
+                const dlBtn = (r.success && r.download_url) ? `
+                    <a href="${escapeHtml(r.download_url)}" class="result-card__btn-download" title="Download cleaned file">
+                        ${SVGS.download}
+                        <span>Download</span>
+                    </a>` : '';
+
+                return `
+                    <div class="result-card">
+                        <div class="result-card__info">
+                            <div class="result-card__icon ${escapeHtml(file_type)}">
+                                ${fileIconSvg}
+                            </div>
+                            <div class="result-card__details">
+                                <div class="result-card__name" title="${escapeHtml(r.filename)}">${escapeHtml(r.filename)}</div>
+                                <div class="result-card__status ${escapeHtml(statusClass)}">
+                                    ${statusIconSvg} ${escapeHtml(statusLabel)}
+                                </div>
+                                ${statsHtml}
+                            </div>
+                        </div>
+                        <div class="result-card__actions">
+                            ${dlBtn}
+                        </div>
+                    </div>`;
+            }).join('');
+
+            notifArea.innerHTML = `
+                ${zipBtnHtml}
+                <div class="result-cards-container">
+                    ${cardsHtml}
+                </div>`;
+
+            // Setup download shortcuts
+            if (successesWithDownloads.length === 1) {
+                const firstDlBtn = notifArea.querySelector('.result-card__btn-download');
+                if (firstDlBtn) {
+                    firstDlBtn.id = 'downloadBtn';
+                    const hintSpan = document.createElement('span');
+                    hintSpan.className = 'btn-shortcut';
+                    hintSpan.id = 'btnShortcutDownload';
+                    hintSpan.textContent = modSymbol + ' + D';
+                    firstDlBtn.appendChild(hintSpan);
+                }
+            } else if (downloadFilenames.length >= 2) {
+                const zipBtn = document.getElementById('downloadZipBtn');
+                if (zipBtn) {
+                    zipBtn.id = 'downloadBtn';
+                    const hintSpan = document.createElement('span');
+                    hintSpan.className = 'btn-shortcut';
+                    hintSpan.textContent = modSymbol + ' + D';
+                    zipBtn.appendChild(hintSpan);
+                }
+            }
+
+            notifArea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+            // Add results to session history
+            results.forEach(r => {
+                const file_type = getExt(r.filename);
+                if (r.success) {
+                    addToHistory(r.filename, file_type, {
+                        success: r.has_watermark,
+                        clean: !r.has_watermark,
+                        error: false,
+                        downloadUrl: r.download_url
+                    });
+                } else {
+                    addToHistory(r.filename, file_type, { error: true });
+                }
+            });
+        }
+
+        form.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            if (selectedFiles.length === 0) return;
+
+            submitBtn.disabled = true;
+            notifArea.innerHTML = '';
+
+            // Show Overlay
+            overlay.classList.add('show');
+            progressBar.style.width = '0%';
+            startTime = Date.now();
+            overlayElap.textContent = '0s';
+
+            const overlaySubtext = document.getElementById('overlaySubtext');
+            overlaySubtext.textContent = '';
+
+            elapsedTimer = setInterval(() => {
+                const sec = Math.floor((Date.now() - startTime) / 1000);
+                overlayElap.textContent = formatTime(sec);
+            }, 1000);
+
+            const results = [];
+            const total = selectedFiles.length;
+
+            for (let i = 0; i < total; i++) {
+                const file = selectedFiles[i];
+                const fileIndex = i + 1;
+
+                overlayText.textContent = `Uploading file ${fileIndex} of ${total}…`;
+                overlaySubtext.textContent = file.name;
+                progressBar.style.width = '0%';
+
+                try {
+                    const result = await uploadAndProcessSingleFile(file, (pct) => {
+                        progressBar.style.width = pct + '%';
+                        overlayText.textContent = `Uploading file ${fileIndex} of ${total} (${pct}%)`;
+                    });
+                    results.push(result);
+                } catch (err) {
+                    console.error(err);
+                    results.push({
+                        filename: file.name,
+                        success: false,
+                        error: err.message || 'Processing failed.'
+                    });
+                }
+            }
+
+            // Cleanup overlay
+            overlay.classList.remove('show');
+            progressBar.style.width = '0%';
+            if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; }
+            submitBtn.disabled = false;
+
+            // Render batch results
+            renderBatchResults(results);
+
+            // Clear the file queue
+            clearFileQueue();
+        });
+
+        /* ── Processing History (sessionStorage) ──────── */
+        function getHistory() {
+            try { return JSON.parse(sessionStorage.getItem('gamma-history') || '[]'); }
+            catch { return []; }
+        }
+
+        function saveHistory(hist) {
+            sessionStorage.setItem('gamma-history', JSON.stringify(hist.slice(0, 30)));
+        }
+
+        function addToHistory(name, ext, result) {
+            const hist = getHistory();
+            hist.unshift({
+                id: Date.now() + Math.random(), // Ensure unique ID even for fast batch operations
+                name,
+                ext,
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                status: result.error ? 'error' : (result.success ? 'success' : 'clean'),
+                downloadUrl: result.downloadUrl || null
+            });
+            saveHistory(hist);
+            renderHistory();
+        }
+
+        function deleteHistoryItem(id) {
+            const hist = getHistory().filter(item => item.id !== id);
+            saveHistory(hist);
+            renderHistory();
+        }
+
+        function clearHistory() {
+            sessionStorage.removeItem('gamma-history');
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const hist = getHistory();
+            if (hist.length === 0) {
+                histSection.style.display = 'none';
+                return;
+            }
+
+            histSection.style.display = '';
+            histCount.textContent = hist.length;
+
+            if (!histList.classList.contains('open') && !histList.dataset.userClosed) {
+                histList.classList.add('open');
+                histToggle.classList.add('open');
+                histToggle.setAttribute('aria-expanded', 'true');
+            }
+
+            histList.innerHTML = hist.map(item => {
+                const statusLabel = item.status === 'success' ? 'Cleaned' : item.status === 'clean' ? 'No watermark' : 'Failed';
+                const statusIconSvg = item.status === 'success' ? SVGS.success : item.status === 'clean' ? SVGS.info : SVGS.error;
+                const fileIconSvg = item.ext === 'pdf'  ? SVGS.pdf
+                                  : item.ext === 'pptx' ? SVGS.pptx
+                                  : item.ext === 'key'  ? SVGS.key
+                                  : item.ext === 'png'  ? SVGS.png
+                                  : SVGS.zip;
+                const iconBg = ['pdf','pptx','key','zip','png'].includes(item.ext) ? item.ext : 'pptx';
+                const extLabel = (item.ext || 'file').toUpperCase();
+
+                return `
+                <li class="history-item" data-id="${item.id}" data-status="${escapeHtml(item.status)}">

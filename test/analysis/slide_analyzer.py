@@ -1,11 +1,16 @@
 """Slide and master analysis for PPTX files."""
 
+from typing import Any, cast
+
 from .shape_analyzer import analyze_shape
 from .utils import emu_to_inches
 
 
-def analyze_slide_layout(layout, slide_width, slide_height):
+def analyze_slide_layout(
+    layout: object, slide_width: int, slide_height: int
+) -> list[str]:
     """Analyze a slide layout."""
+    layout = cast(Any, layout)
     result = []
     result.append(f"\n  Layout: {layout.name}")
 
@@ -15,8 +20,11 @@ def analyze_slide_layout(layout, slide_width, slide_height):
     return result
 
 
-def analyze_slide_master(master, slide_width, slide_height):
+def analyze_slide_master(
+    master: object, slide_width: int, slide_height: int
+) -> list[str]:
     """Analyze a slide master."""
+    master = cast(Any, master)
     result = []
     result.append(
         f"\nSlide Master: {master.name if hasattr(master, 'name') else 'Unnamed'}"
@@ -34,10 +42,11 @@ def analyze_slide_master(master, slide_width, slide_height):
     return result
 
 
-def analyze_slides(prs):
+def analyze_slides(prs: object) -> list[tuple[str, Any, str]]:
     """Analyze all slides in a presentation."""
-    slide_width = prs.slide_width
-    slide_height = prs.slide_height
+    prs = cast(Any, prs)
+    slide_width = int(prs.slide_width or 0)
+    slide_height = int(prs.slide_height or 0)
     gamma_shapes = []
 
     print("\n" + "=" * 80)
@@ -73,14 +82,16 @@ def analyze_slides(prs):
     return gamma_shapes
 
 
-def print_slide_dimensions(prs):
+def print_slide_dimensions(prs: object) -> None:
     """Print slide dimensions."""
-    slide_width = prs.slide_width
-    slide_height = prs.slide_height
+    prs = cast(Any, prs)
+    slide_width = int(prs.slide_width or 0)
+    slide_height = int(prs.slide_height or 0)
 
     print("\nSlide dimensions:")
     print(f"  Width: {slide_width} EMUs ({emu_to_inches(slide_width):.2f} inches)")
     print(f"  Height: {slide_height} EMUs ({emu_to_inches(slide_height):.2f} inches)")
     print(
-        f"  Aspect ratio: {emu_to_inches(slide_width) / emu_to_inches(slide_height):.2f}:1"
+        "  Aspect ratio: "
+        f"{emu_to_inches(slide_width) / emu_to_inches(slide_height):.2f}:1"
     )

@@ -17,7 +17,9 @@ def get_mime_type(extension: str) -> str:
     """Get the MIME type for a file extension."""
     mime_types = {
         "pdf": "application/pdf",
-        "pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "pptx": (
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+        ),
         "key": "application/x-iwork-keynote-sffkey",
         "zip": "application/zip",
         "png": "image/png",

@@ -1,14 +1,17 @@
-import fitz  # PyMuPDF
 import logging
+
+import fitz  # PyMuPDF
 
 logger = logging.getLogger(__name__)
 
 
 class WatermarkDetector:
-    def __init__(self, target_domain="gamma.app"):
+    def __init__(self, target_domain: str = "gamma.app") -> None:
         self.target_domain = target_domain
 
-    def _has_target_link(self, obj_rect, page, target_domain):
+    def _has_target_link(
+        self, obj_rect: fitz.Rect, page: fitz.Page, target_domain: str
+    ) -> tuple[bool, str]:
         """Checks if an object has a link to the target domain"""
         for link in page.get_links():
             link_rect = fitz.Rect(link["from"])
@@ -17,7 +20,9 @@ class WatermarkDetector:
                 return True, link.get("uri", "")
         return False, ""
 
-    def identify_watermarks(self, pdf_path):
+    def identify_watermarks(
+        self, pdf_path: str
+    ) -> tuple[list[dict[str, object]], str | None]:
         """Identifies elements to remove (watermarks from target domain)"""
         results = []
         try:

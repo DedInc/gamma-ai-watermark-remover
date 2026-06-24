@@ -1,0 +1,220 @@
+
+        /* Button Background and Border */
+        .theme-toggle::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            border: 1px solid var(--divider);
+            background: var(--bg-card);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            z-index: 1;
+            transition: background var(--transition), border-color var(--transition);
+        }
+
+        .theme-toggle:hover::before {
+            border-color: var(--accent);
+        }
+
+        /* Pulsing sun/moon halo pseudo-element */
+        .theme-toggle::after {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            border-radius: 50%;
+            z-index: -1;
+            pointer-events: none;
+            transition: all var(--transition);
+        }
+
+        /* Dark mode: moon light radiating glow */
+        @keyframes moon-ray-glow {
+            0%   { box-shadow: 0 0 8px 4px rgba(167, 139, 250, 0.5),  0 0 20px 8px  rgba(167, 139, 250, 0.25); }
+            50%  { box-shadow: 0 0 16px 8px rgba(167, 139, 250, 0.75), 0 0 40px 18px rgba(167, 139, 250, 0.35); }
+            100% { box-shadow: 0 0 8px 4px rgba(167, 139, 250, 0.5),  0 0 20px 8px  rgba(167, 139, 250, 0.25); }
+        }
+        [data-theme="dark"] .theme-toggle::after {
+            background: radial-gradient(circle, rgba(167, 139, 250, 0.55) 0%, rgba(167, 139, 250, 0.15) 55%, transparent 80%);
+            animation: moon-pulse 3.5s ease-in-out infinite;
+        }
+        [data-theme="dark"] .theme-toggle {
+            animation: moon-ray-glow 3.5s ease-in-out infinite;
+        }
+        [data-theme="dark"] .theme-toggle .icon-moon {
+            display: inline-block;
+            color: #a78bfa;
+            filter: drop-shadow(0 0 4px rgba(167, 139, 250, 0.9)) drop-shadow(0 0 10px rgba(167, 139, 250, 0.55));
+        }
+        [data-theme="dark"] .theme-toggle:hover .icon-moon {
+            filter: drop-shadow(0 0 6px rgba(167, 139, 250, 1)) drop-shadow(0 0 16px rgba(167, 139, 250, 0.8));
+        }
+
+        /* Light mode: sun light radiating pulse */
+        [data-theme="light"] .theme-toggle::after {
+            background: radial-gradient(circle, rgba(251, 191, 36, 0.6) 0%, rgba(251, 191, 36, 0.2) 50%, transparent 75%);
+            animation: sun-pulse 2.4s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+        }
+
+        .theme-toggle:hover {
+            color: var(--accent-light);
+            transform: scale(1.1);
+        }
+
+        .theme-toggle:active {
+            transform: scale(0.95);
+        }
+
+        .theme-toggle svg {
+            position: relative;
+            z-index: 2;
+            width: 20px;
+            height: 20px;
+            transition: transform var(--transition);
+        }
+
+        /* Dark mode: show moon (glow handled above) */
+        .theme-toggle .icon-moon { display: inline-block; color: #a78bfa; }
+        .theme-toggle .icon-sun  { display: none; }
+
+        /* Light mode: show sun with radiate */
+        [data-theme="light"] .theme-toggle .icon-moon { display: none; }
+        [data-theme="light"] .theme-toggle .icon-sun  {
+            display: inline-block;
+            color: #f59e0b;
+            filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.9)) drop-shadow(0 0 10px rgba(251, 191, 36, 0.6));
+            animation: sun-spin 12s linear infinite;
+        }
+        [data-theme="light"] .theme-toggle:hover .icon-sun {
+            filter: drop-shadow(0 0 6px rgba(251, 191, 36, 1)) drop-shadow(0 0 16px rgba(251, 191, 36, 0.8));
+            animation: sun-spin 3s linear infinite;
+        }
+        /* Extra ray glow on the button itself in light mode */
+        [data-theme="light"] .theme-toggle {
+            animation: sun-ray-glow 2.4s ease-in-out infinite;
+            border-radius: 50%;
+        }
+
+        /* ============================
+           Main Container
+           ============================ */
+        main {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 660px;
+        }
+
+        .card {
+            background: var(--bg-card);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid var(--bg-card-border);
+            border-radius: var(--radius);
+            padding: 48px 40px 40px;
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+            transition: background var(--transition), border-color var(--transition), box-shadow var(--transition);
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            inset: -1px;
+            border-radius: var(--radius);
+            padding: 1px;
+            background: linear-gradient(135deg, rgba(124,58,237,0.2), transparent 50%, rgba(167,139,250,0.1));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+        }
+
+        /* ============================
+           Header / Logo
+           ============================ */
+        .header {
+            text-align: center;
+            margin-bottom: 36px;
+        }
+
+        .logo-mark {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 24px var(--accent-glow);
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: -0.5px;
+        }
+
+        .header h1 {
+            font-size: 1.65rem;
+            font-weight: 600;
+            letter-spacing: -0.3px;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            font-size: 0.92rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .header p strong {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        /* ============================
+           Drop Zone
+           ============================ */
+        .drop-zone {
+            position: relative;
+            border: 2px dashed var(--divider);
+            border-radius: var(--radius-sm);
+            padding: 36px 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all var(--transition);
+            margin-bottom: 24px;
+            background: var(--bg-input);
+        }
+
+        .drop-zone:hover {
+            border-color: rgba(124, 58, 237, 0.3);
+            background: var(--bg-input-hover);
+        }
+
+        .drop-zone.drag-over {
+            border-color: var(--accent);
+            background: var(--accent-glow);
+            transform: scale(1.01);
+            box-shadow: inset 0 0 30px var(--bg-card-glow);
+        }
+
+        .drop-zone.drag-over .drop-zone__icon {
+            transform: scale(1.15);
+            color: var(--accent-light);
+        }
+
+        .drop-zone.has-file {
+            border-color: var(--accent);
+            border-style: solid;
+            background: var(--accent-glow);
+            padding: 14px 16px;
+        }
+
+        .drop-zone__input {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
